@@ -24,7 +24,7 @@ JAVA_OPTS="-Dakka.cluster.seed-nodes.0=akka.tcp://MarsSystem@127.0.0.1:4416"
 
 # Setting PIDFILE
 # ---------------
-# PIDFILE="/var/run/${{app_name}}/play.pid"
+PIDFILE="/var/run/${{app_name}}/play.pid"
 
 # export env vars for 3rd party libs
 # ----------------------------------
