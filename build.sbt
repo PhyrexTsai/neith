@@ -2,7 +2,7 @@ name := """mars"""
 
 version := "1.0-SNAPSHOT"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+lazy val root = (project in file(".")).enablePlugins(PlayScala, RpmPlugin)
 
 scalaVersion := "2.11.8"
 
@@ -25,3 +25,17 @@ libraryDependencies ++= Seq(
   "me.mig" %% "matter-stream" % "1.0.2"
 )
 
+// Settings for sbt-native-packager
+maintainer in Linux := "devteam <devteam@mig.me>"
+
+packageSummary in Linux := "Notification service"
+
+packageDescription := "Provide notifications include Email, SMS, APNS and GCM."
+
+rpmRelease := "1"
+
+rpmVendor := "mig.me"
+
+rpmUrl := Some("http://github.com/example/server")
+
+rpmLicense := Some("Migme Ltd.")
