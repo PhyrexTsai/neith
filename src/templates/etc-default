@@ -20,7 +20,7 @@
 
 # Setting JAVA_OPTS
 # -----------------
-JAVA_OPTS="-Dakka.cluster.seed-nodes.0=akka.tcp://MarsSystem@127.0.0.1:4416"
+JAVA_OPTS="-Dpidfile.path=/var/run/play.pid -Dakka.cluster.seed-nodes.0=akka.tcp://MarsSystem@127.0.0.1:4416"
 
 # Setting PIDFILE
 # ---------------
