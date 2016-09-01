@@ -26,11 +26,11 @@ libraryDependencies ++= Seq(
 )
 
 // Settings for sbt-native-packager
-maintainer in Linux := "devteam <devteam@mig.me>"
+maintainer in Rpm := "devteam <devteam@mig.me>"
 
-packageSummary in Linux := "Notification service"
+packageSummary in Rpm := "Notification service"
 
-packageDescription := "Provide notifications include Email, SMS, APNS and GCM."
+packageDescription in Rpm := "Provide notifications include Email, SMS, APNS and GCM."
 
 rpmRelease := "1"
 
