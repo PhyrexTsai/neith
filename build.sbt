@@ -1,7 +1,5 @@
 name := """mars"""
 
-version := "1.0"
-
 lazy val root = (project in file(".")).enablePlugins(PlayScala, RpmPlugin)
 
 scalaVersion := "2.11.8"
@@ -9,7 +7,7 @@ scalaVersion := "2.11.8"
 val akkaVersion = "2.4.9"
 
 libraryDependencies ++= Seq(
-  jdbc,
+//  jdbc,
   cache,
   ws,
   "org.scala-lang" % "scala-compiler" % scalaVersion.value,
@@ -21,6 +19,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-kafka" % "0.11-RC1",
   "com.typesafe.play" %% "play-mailer" % "5.0.0",
   "com.typesafe.play" % "twirl-compiler_2.11" % "1.2.0",
+  // Datastores
+  "mysql" % "mysql-connector-java" % "5.1.34",
+  "com.typesafe.play" %% "play-slick" % "2.0.2",
   // Nexus dependencies
   "me.mig" %% "matter-stream" % "1.0.2"
 )

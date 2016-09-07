@@ -4,10 +4,9 @@ import javax.inject._
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Flow, Sink, Source}
-import play.api.libs.json.{JsValue, Json}
+import akka.stream.scaladsl.{Sink, Source}
 import play.api.mvc._
-import services.{BaseResponse, EmailService}
+import services.EmailService
 
 import scala.collection.immutable.Iterable
 
@@ -45,16 +44,5 @@ class VerificationController @Inject()(system: ActorSystem, emailService: EmailS
         BadRequest(result._2)
       }
     )
-  }
-
-  // TODO: Could extract to be the common util.
-  def serializeToJsonResponse: Flow[BaseResponse, (Int, JsValue), _] = Flow[BaseResponse].map { response =>
-    val statusCode = if (response.error.isEmpty) 200 else 400
-    response match {
-      case r: SendEmailAck =>
-        println("sendemailresponse: " + r)
-        (statusCode, Json.toJson[SendEmailAck](r)(sendEmailResponseWrites))
-//        (statusCode, ByteString(Json.toJson[SendEmailAck](r)(sendEmailResponseWrites).toString))
-    }
   }
 }

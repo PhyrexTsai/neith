@@ -3,11 +3,13 @@ package services
 import javax.inject._
 
 import akka.actor.ActorSystem
+import akka.stream.scaladsl.Flow
+import models.NotificationMappings._
 import org.apache.commons.mail.EmailException
+import play.api.Logger
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.mailer.{Email, MailerClient}
-import play.api.{Configuration, Logger}
 import play.twirl.api.Html
 import workers.EmailWorker
 
@@ -28,35 +30,41 @@ import scala.concurrent.Future
  * application's [[ApplicationLifecycle]] to register a stop hook.
  */
 @Singleton
-class EmailService @Inject()(system: ActorSystem, configuration: Configuration, appLifecycle: ApplicationLifecycle, mailerClient: MailerClient) {
+class EmailService @Inject()(system: ActorSystem, appLifecycle: ApplicationLifecycle, templateBackgroundService: TemplateBackgroundService, mailerClient: MailerClient) {
   import EmailService._
   import EmailWorker._
 
-  // Initialize workers
-//  val emailWorkerPool = system.actorOf(BalancingPool(20).props(EmailWorker.props(mailerClient)), "EmailWorker")
-
-  // This code is called when the application starts.
-//  private val start: Instant = clock.instant
-//  Logger.info(s"ApplicationTimer demo: Starting application at $start.")
-
   def sendVerifyEmail(toVerify: EmailVerification): SendEmailAck = {
-    val emailVerifyTemplate = TemplateBackgroundService.get[(String, String) => Html]("html.emailVerify")
-    if (emailVerifyTemplate == null) {
+    sendEmailByTemplate(EMAIL_VERIFICATION, "Activate your migme account", List(toVerify.username, toVerify.verifyLink), Seq(toVerify.email))
+  }
+
+  def sendForgotPasswordEmail(toReset: ForgotPassword): SendEmailAck = {
+    sendEmailByTemplate(FORGOT_PASSWORD_EMAIL, "Reset your password", List(toReset.username, toReset.resetLink), Seq(toReset.email))
+  }
+
+  def sendEmailByTemplate(templateType: NotificationMappings, subject: String, parameters: List[String], recipients: Seq[String]): SendEmailAck = {
+    val emailTemplate = templateBackgroundService.get[List[String] => Html](templateType.toString)
+    if (emailTemplate == null) {
       SendEmailAck(error = Some("Can't load template now, please try again later."))
     } else {
       try {
         val response = mailerClient.send(Email(
-          "Activate your migme account",
+          subject,
           NOT_REPLY_SENDER,
-          Seq(toVerify.email),
+          recipients,
           // sends text, HTML or both...
           //      bodyText = Some("A text message"),
-          bodyHtml = Some(emailVerifyTemplate.static(toVerify.username, toVerify.verifyLink).toString().trim)
+          bodyHtml = Some(emailTemplate.static(parameters).toString().trim)
         ))
         if (!Some(response).isEmpty) {
           SendEmailAck(Some(true))
         } else {
-          SendEmailAck(error = Some("Sending verification email failed."))
+          val errorMessage = templateType match {
+            case EMAIL_VERIFICATION => "Sending verification email failed."
+            case FORGOT_PASSWORD_EMAIL => "Sending forgot password email failed."
+            case _ => "Sending email failed (type: " + templateType.toString + ")."
+          }
+          SendEmailAck(error = Some(errorMessage))
         }
       } catch {
         case ex: EmailException =>
@@ -67,28 +75,12 @@ class EmailService @Inject()(system: ActorSystem, configuration: Configuration, 
           SendEmailAck(error = Some("Unknown exception: " + ex.getMessage))
       }
     }
-
-//    val future = (emailWorkerPool ? SendMail("Activate your migme account", Seq(toVerify.email), emailVerifyTemplate.static(toVerify.username, toVerify.verifyLink).toString().trim))
-//    Future.firstCompletedOf(Seq(future))
-//      .map { response =>
-//      response match {
-//        case s: String =>
-//          Logger.info("resposne: " + s)
-//          Json.toJson[SendEmailResponse](SendEmailResponse(true))(sendEmailResponseWrites)
-//        case x => Json.obj("error" -> JsString(x.toString))
-//      }
-//    }
   }
-
-  // Send notification email
 
   // When the application starts, register a stop hook with the
   // ApplicationLifecycle object. The code inside the stop hook will
   // be run when the application stops.
   appLifecycle.addStopHook { () =>
-//    val stop: Instant = clock.instant
-//    val runningTime: Long = stop.getEpochSecond - start.getEpochSecond
-//    Logger.info(s"ApplicationTimer demo: Stopping application at ${clock.instant} after ${runningTime}s.")
     Future.successful(())
   }
 }
@@ -100,16 +92,23 @@ trait BaseResponse {
 object EmailService {
   // Request
   case class EmailVerification(username: String, email: String, verifyLink: String)
+  case class ForgotPassword(username: String, email: String, resetLink: String)
   // Response
   case class SendEmailAck(isSuccess: Option[Boolean] = None, override val error: Option[String] = None) extends BaseResponse
 
   // Json reads
   implicit val emailVerificationReads = Json.reads[EmailVerification]
+  implicit val forgotPasswordReads = Json.reads[ForgotPassword]
   // Json writes
-//  implicit val jsonResponseWrites = Json.writes[JsonResponse]
   implicit val sendEmailResponseWrites = Json.writes[SendEmailAck]
 
-  def JsonError(message: String): JsValue = {
-    Json.obj("error" -> message)
+  // TODO: Could extract to be the common util.
+  def serializeToJsonResponse: Flow[BaseResponse, (Int, JsValue), _] = Flow[BaseResponse].map { response =>
+    val statusCode = if (response.error.isEmpty) 200 else 400
+    response match {
+      case r: SendEmailAck =>
+        Logger.info("sendemail response: " + r)
+        (statusCode, Json.toJson[SendEmailAck](r)(sendEmailResponseWrites))
+    }
   }
 }
