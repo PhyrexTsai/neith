@@ -11,7 +11,6 @@ import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.mailer.{Email, MailerClient}
 import play.twirl.api.Html
-import workers.EmailWorker
 
 import scala.concurrent.Future
 
@@ -32,7 +31,6 @@ import scala.concurrent.Future
 @Singleton
 class EmailService @Inject()(system: ActorSystem, appLifecycle: ApplicationLifecycle, templateBackgroundService: TemplateBackgroundService, mailerClient: MailerClient) {
   import EmailService._
-  import EmailWorker._
 
   def sendVerifyEmail(toVerify: EmailVerification): SendEmailAck = {
     sendEmailByTemplate(EMAIL_VERIFICATION, "Activate your migme account", List(toVerify.username, toVerify.verifyLink), Seq(toVerify.email))
@@ -90,6 +88,8 @@ trait BaseResponse {
 }
 
 object EmailService {
+  final val NOT_REPLY_SENDER = "Migme <donotreply@mig.me>"
+
   // Request
   case class EmailVerification(username: String, email: String, verifyLink: String)
   case class ForgotPassword(username: String, email: String, resetLink: String)
