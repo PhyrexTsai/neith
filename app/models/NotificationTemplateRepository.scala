@@ -50,7 +50,6 @@ class NotificationTemplateRepository @Inject()(@NamedDatabase("fusion") dbConfig
   private lazy val templates = TableQuery[NotificationTemplates]
 
   def getTemplateByMapId(mapId: NotificationMappings): Future[Seq[NotificationTemplate]] = {
-    println("mapId: " + mapId.id)
     db.run(templates.filter(t => t.mapId === mapId.id).result)
   }
 }

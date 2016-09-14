@@ -2,7 +2,10 @@ package filters
 
 import akka.stream.Materializer
 import javax.inject._
+
+import play.api.Logger
 import play.api.mvc._
+
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -16,17 +19,30 @@ import scala.concurrent.{ExecutionContext, Future}
  * It is used below by the `map` method.
  */
 @Singleton
-class ExampleFilter @Inject()(
+class LoggingFilter @Inject()(
     implicit override val mat: Materializer,
     exec: ExecutionContext) extends Filter {
 
   override def apply(nextFilter: RequestHeader => Future[Result])
            (requestHeader: RequestHeader): Future[Result] = {
-    // Run the next filter in the chain. This will call other filters
-    // and eventually call the action. Take the result and modify it
-    // by adding a new header.
+    val startTime = System.currentTimeMillis
+
     nextFilter(requestHeader).map { result =>
-      result.withHeaders("X-ExampleFilter" -> "foo")
+
+      val requestTime = System.currentTimeMillis - startTime
+
+      // TODO this should be determined whether request body is necessary for tracing.
+      Logger.info(s"MARS REST: ${result.header.status} ${requestHeader.method} ${requestHeader.uri} $requestTime $logHeaders ")
+
+      def logHeaders =
+        requestHeader.headers.toSimpleMap.toSeq.sortBy(_._1).collect {
+          case ("User-Agent", v) => s"User-Agent: $v"
+          case ("user-agent", v) => s"User-Agent: $v"
+          case ("sessionId", v) => s"sessionId: $v"
+          case ("X-Forwarded-For", v) => s"X-Forwarded-For: $v"
+        }
+
+      result
     }
   }
 
