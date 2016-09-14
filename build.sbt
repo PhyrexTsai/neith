@@ -25,6 +25,8 @@ libraryDependencies ++= Seq(
   // Datastores
   "mysql" % "mysql-connector-java" % "5.1.34",
   "com.typesafe.play" %% "play-slick" % "2.0.2",
+  // Logging
+  "net.logstash.logback" % "logstash-logback-encoder" % "4.7",
   // Nexus dependencies
   "me.mig" %% "matter-stream" % "1.0.2"
 )
