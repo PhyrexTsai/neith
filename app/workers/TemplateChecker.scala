@@ -73,14 +73,16 @@ class TemplateChecker(config: Config, emailTemplateRepo: NotificationTemplateRep
           val templateName = templateMap.toString + templateSuffix
           if (templateBackgroundService.isTemplateUpdated(className, template.timeUpdated.getTime)) {
             Logger.info("Updating template: " + className)
-            val templateFile = Files.write(Paths.get(generatedDir.getAbsolutePath, templateName), template.bodyTemplate.getBytes).toFile
+            val templateFileDir = Paths.get(config.getString("dir")).toFile
+            // Using .toFile is not quaranteed to be written out, so use new File to make sure the writing has been completed.
+            val templatePath = Files.write(Paths.get(templateFileDir.getAbsolutePath, templateName), template.bodyTemplate.getBytes)
+            val templateFile = new File(templatePath.toString)
+            val Some(generated) = TwirlCompiler.compile(templateFile, templateFileDir, generatedDir, "play.twirl.api.HtmlFormat",
+              additionalImports = TwirlCompiler.DefaultImports ++ additionalImports)
+            val mapper = GeneratedSource(generated)
 
             // Because the twirl compiler has to be accessed synchronized, currently we should add synchronized here.
             this.synchronized {
-
-              val Some(generated) = TwirlCompiler.compile(templateFile, generatedDir, generatedDir, "play.twirl.api.HtmlFormat",
-                additionalImports = TwirlCompiler.DefaultImports ++ additionalImports)
-              val mapper = GeneratedSource(generated)
 
               val run = new compiler.Run
 
@@ -94,7 +96,6 @@ class TemplateChecker(config: Config, emailTemplateRepo: NotificationTemplateRep
                   throw CompilationError(msg, mapper.mapLine(line), mapper.mapPosition(column))
                 }
               }
-
             }
 
             templateBackgroundService.put(className, new CompiledTemplate[T](className), Calendar.getInstance().getTimeInMillis)
@@ -128,8 +129,8 @@ class TemplateChecker(config: Config, emailTemplateRepo: NotificationTemplateRep
   }
 
   def checkAndRebuild(): Unit = {
-    Files.walkFileTree(generatedDir, recursiveFileDeleter)
-    Files.walkFileTree(generatedClasses, recursiveFileDeleter)
+//    Files.walkFileTree(generatedDir, recursiveFileDeleter)
+//    Files.walkFileTree(generatedClasses, recursiveFileDeleter)
     Files.createDirectories(generatedDir)
     Files.createDirectories(generatedClasses)
 
