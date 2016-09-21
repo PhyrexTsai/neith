@@ -1,12 +1,12 @@
-package services
+package me.mig.mars.services
 
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import models.NotificationTemplateRepository
+import me.mig.mars.workers.TemplateChecker
+import me.mig.mars.models.NotificationTemplateRepository
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
-import workers.TemplateChecker
 
 import scala.collection.mutable
 import scala.concurrent.Future

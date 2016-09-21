@@ -1,12 +1,12 @@
-package controllers
+package me.mig.mars.controllers
 
 import javax.inject._
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
+import me.mig.mars.services.EmailService
 import play.api.mvc._
-import services.EmailService
 
 import scala.collection.immutable.Iterable
 

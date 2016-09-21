@@ -1,4 +1,4 @@
-package workers
+package me.mig.mars.workers
 
 import java.util.concurrent.atomic.AtomicLong
 

@@ -1,4 +1,4 @@
-package workers
+package me.mig.mars.workers
 
 import java.io.{File, IOException}
 import java.net.URLClassLoader
@@ -8,11 +8,11 @@ import java.util.Calendar
 
 import akka.actor.{Actor, Props}
 import com.typesafe.config.Config
-import models.NotificationTemplateRepository
+import me.mig.mars.services.TemplateBackgroundService
+import me.mig.mars.models.NotificationTemplateRepository
 import play.api.Logger
 import play.twirl.api.Html
 import play.twirl.compiler.{GeneratedSource, TwirlCompiler}
-import services.TemplateBackgroundService
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -25,7 +25,7 @@ import scala.tools.nsc.{Global, Settings}
   */
 class TemplateChecker(config: Config, emailTemplateRepo: NotificationTemplateRepository, templateBackgroundService: TemplateBackgroundService) extends Actor {
   import TemplateChecker._
-  import models.NotificationMappings._
+  import me.mig.mars.models.NotificationMappings._
 
   class TemplateBuilder(generatedDir: File, generatedClasses: File) {
     implicit val classloader = new URLClassLoader(Array(generatedClasses.toURI.toURL), Class.forName("play.twirl.compiler.TwirlCompiler").getClassLoader)

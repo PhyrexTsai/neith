@@ -1,4 +1,4 @@
-package filters
+package me.mig.mars.filters
 
 import akka.stream.Materializer
 import javax.inject._

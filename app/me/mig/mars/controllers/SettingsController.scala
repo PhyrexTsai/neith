@@ -1,15 +1,15 @@
-package controllers
+package me.mig.mars.controllers
 
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
+import me.mig.mars.services.EmailService
+import me.mig.mars.services.EmailService._
 import play.api.mvc.Action
 import play.api.mvc.BodyParsers.parse
 import play.api.mvc.Results.{BadRequest, Ok}
-import services.EmailService
-import services.EmailService.{ForgotPassword, serializeToJsonResponse}
 
 import scala.collection.immutable.Iterable
 
