@@ -1,4 +1,4 @@
-package workers
+package me.mig.mars.workers
 
 import akka.actor.ActorSystem
 import akka.kafka.ProducerSettings

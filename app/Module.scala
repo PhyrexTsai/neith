@@ -1,5 +1,5 @@
 import com.google.inject.AbstractModule
-import services.{EmailService, TemplateBackgroundService}
+import me.mig.mars.services.{EmailService, TemplateBackgroundService}
 
 /**
  * This class is a Guice module that tells Guice how to bind several

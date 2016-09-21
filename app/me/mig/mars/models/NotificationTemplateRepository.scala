@@ -1,4 +1,4 @@
-package models
+package me.mig.mars.models
 
 import java.sql.Timestamp
 import javax.inject.{Inject, Singleton}

@@ -1,4 +1,4 @@
-package controllers
+package me.mig.mars.controllers
 
 import javax.inject._
 
@@ -18,7 +18,7 @@ class HomeController @Inject() extends Controller {
     * a path of `/`.
     */
   def index = Action {
-    Ok(views.html.index("Your new application is ready."))
+    Ok(me.mig.mars.views.html.index("Your new application is ready."))
   }
 
 }

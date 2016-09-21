@@ -1,10 +1,10 @@
-package services
+package me.mig.mars.services
 
 import javax.inject._
 
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Flow
-import models.NotificationMappings._
+import me.mig.mars.models.NotificationMappings._
 import org.apache.commons.mail.EmailException
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
@@ -30,7 +30,7 @@ import scala.concurrent.Future
  */
 @Singleton
 class EmailService @Inject()(system: ActorSystem, appLifecycle: ApplicationLifecycle, templateBackgroundService: TemplateBackgroundService, mailerClient: MailerClient) {
-  import EmailService._
+  import me.mig.mars.services.EmailService._
 
   def sendVerifyEmail(toVerify: EmailVerification): SendEmailAck = {
     sendEmailByTemplate(EMAIL_VERIFICATION, "Activate your migme account", List(toVerify.username, toVerify.verifyLink), Seq(toVerify.email))

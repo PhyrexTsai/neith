@@ -3,13 +3,13 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                           controllers.HomeController.index
+GET     /                           me.mig.mars.controllers.HomeController.index
 # An example controller showing how to use dependency injection
-POST    /sendVerificationEmail      controllers.VerificationController.verifyByEmail
+POST    /sendVerificationEmail      me.mig.mars.controllers.VerificationController.verifyByEmail
 # An example controller showing how to use dependency injection
-POST    /sendForgotPasswordEmail    controllers.SettingsController.handleForgotPassword
+POST    /sendForgotPasswordEmail    me.mig.mars.controllers.SettingsController.handleForgotPassword
 # An example controller showing how to write asynchronous code
-GET     /message                    controllers.AsyncController.message
+GET     /message                    me.mig.mars.controllers.AsyncController.message
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

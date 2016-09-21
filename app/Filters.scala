@@ -1,6 +1,6 @@
 import javax.inject._
 
-import filters.LoggingFilter
+import me.mig.mars.filters.LoggingFilter
 import play.api._
 import play.api.http.HttpFilters
 
