@@ -31,18 +31,6 @@ class VerificationController @Inject()(system: ActorSystem, emailService: EmailS
   def verifyByEmail = Action.async(parse.json) { request =>
     val verifySource = Source[EmailVerification](Iterable(request.body.as[EmailVerification]))
     val response = verifySource.map(verify => emailService.sendVerifyEmail(verify)).via(serializeToJsonResponse).runWith(Sink.head)
-    response.map(result =>
-//      Logger.info("result: " + result._2.utf8String)
-//      Result(
-//        ResponseHeader(result._1),
-//        HttpEntity.Strict(result._2, None)
-//      )
-//    }
-      if (result._1 == 200) {
-        Ok(result._2)
-      } else {
-        BadRequest(result._2)
-      }
-    )
+    response.map( result => Results.Status(result._1)(result._2) )
   }
 }
