@@ -2,6 +2,7 @@ import sbt.Attributed
 import sbt.Keys._
 import sbtassembly.AssemblyPlugin.autoImport._
 import sbtassembly.MergeStrategy
+import sbtrelease.ReleaseStateTransformations._
 
 name := """mars"""
 
@@ -75,6 +76,20 @@ publishTo := {
     Some("releases"  at nexus + "content/repositories/releases")
 }
 
+// releaseSettings
+releaseProcess := Seq[ReleaseStep](
+  checkSnapshotDependencies,
+  inquireVersions,
+  runTest,
+  setReleaseVersion,
+  commitReleaseVersion,
+  publishArtifacts,
+  tagRelease,
+  setNextVersion,
+  commitNextVersion,
+  pushChanges
+)
+
 // ==============================================
 //  Assembly Settigns
 // ==============================================
@@ -95,16 +110,15 @@ lazy val customMergeStrategy: String => MergeStrategy = {
 
 lazy val mars = (project in file(".")).
   enablePlugins(PlayScala).
-  settings(commonSettings: _*).
   settings(
     mainClass in assembly := Some("play.core.server.ProdServerStart"),
     fullClasspath in assembly += Attributed.blank(PlayKeys.playPackageAssets.value),
-//    Defaults.coreDefaultSettings ++ sbtassembly.AssemblyPlugin.assemblySettings ++
-//      addArtifact(Artifact("mars", "assembly"), sbtassembly.AssemblyKeys.assembly) ++
-//      Seq(
-//        name := "mars",
-//        sbtassembly.AssemblyKeys.assemblyJarName <<= (name, scalaVersion in ThisBuild, version in ThisBuild) map ((x,y,z) => "%s_%s-%s-assembly.jar" format(x,y,z))
-//      ),
+    Defaults.coreDefaultSettings ++ sbtassembly.AssemblyPlugin.assemblySettings ++
+      addArtifact(Artifact("mars", "assembly"), sbtassembly.AssemblyKeys.assembly) ++
+      Seq(
+        name := "mars",
+        sbtassembly.AssemblyKeys.assemblyJarName <<= (name, scalaVersion in ThisBuild, version in ThisBuild) map ((x,y,z) => "%s_%s-%s-assembly.jar" format(x,y,z))
+      ),
     // Use the customMergeStrategy in your settings
     assemblyMergeStrategy in assembly := customMergeStrategy,
 
@@ -126,4 +140,4 @@ lazy val mars = (project in file(".")).
 
     // Exclude tests in assembly
     test in assembly := {}
-  )
+  ).settings(commonSettings: _*)
