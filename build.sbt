@@ -6,7 +6,7 @@ import sbtrelease.ReleaseStateTransformations._
 
 name := """mars"""
 
-scalaVersion := "2.11.8"
+scalaVersion in Global := "2.11.8"
 
 val akkaVersion = "2.4.9"
 
@@ -40,26 +40,6 @@ libraryDependencies ~= { _ map {
   case m => m
 }}
 
-// ==============================================
-//  RPM Settigns
-// ==============================================
-// Settings for sbt-native-packager
-enablePlugins(RpmPlugin)
-
-maintainer in Rpm := "devteam <devteam@mig.me>"
-
-packageSummary in Rpm := "Notification service"
-
-packageDescription in Rpm := "Provide notifications include Email, SMS, APNS and GCM."
-
-rpmRelease := "1"
-
-rpmVendor := "mig.me"
-
-rpmUrl := Some("http://github.com/example/server")
-
-rpmLicense := Some("Migme Ltd.")
-
 //=======================================================================================
 // Publish
 //=======================================================================================
@@ -67,6 +47,8 @@ rpmLicense := Some("Migme Ltd.")
 publishMavenStyle := true
 
 publishArtifact in Test := false
+
+publishArtifact in (Compile, packageDoc) in ThisBuild := false
 
 publishTo := {
   val nexus = "https://tools.projectgoth.com/nexus/"
@@ -104,12 +86,13 @@ lazy val commonSettings = Seq(
 // I like this better than the inline version mentioned in assembly's README
 lazy val customMergeStrategy: String => MergeStrategy = {
 //  case PathList("META-INF", "aop.xml") => CustomMerge.aopMerge
-  case PathList("META-INF", "io.netty.versions.properties") => CustomMerge.nettyMerge
+  case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.discard
   case s => MergeStrategy.defaultMergeStrategy(s)
 }
 
 lazy val mars = (project in file(".")).
   enablePlugins(PlayScala).
+  settings(commonSettings: _*).
   settings(
     mainClass in assembly := Some("play.core.server.ProdServerStart"),
     fullClasspath in assembly += Attributed.blank(PlayKeys.playPackageAssets.value),
@@ -117,7 +100,7 @@ lazy val mars = (project in file(".")).
       addArtifact(Artifact("mars", "assembly"), sbtassembly.AssemblyKeys.assembly) ++
       Seq(
         name := "mars",
-        sbtassembly.AssemblyKeys.assemblyJarName <<= (name, scalaVersion in ThisBuild, version in ThisBuild) map ((x,y,z) => "%s_%s-%s-assembly.jar" format(x,y,z))
+        sbtassembly.AssemblyKeys.assemblyJarName <<= (name, scalaVersion, version in ThisBuild) map ((x,y,z) => "%s_%s-%s-assembly.jar" format(x,y,z))
       ),
     // Use the customMergeStrategy in your settings
     assemblyMergeStrategy in assembly := customMergeStrategy,
@@ -140,4 +123,4 @@ lazy val mars = (project in file(".")).
 
     // Exclude tests in assembly
     test in assembly := {}
-  ).settings(commonSettings: _*)
+  )
