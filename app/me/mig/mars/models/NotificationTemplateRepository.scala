@@ -19,7 +19,7 @@ case class NotificationTemplate(
                                  templateType: Int,
                                  subjectTemplate: String,
                                  bodyTemplate: String,
-                                 mimeType: String,
+//                                 mimeType: String,
                                  dateCreated: Timestamp,
                                  timeUpdated: Timestamp )
 
@@ -39,11 +39,11 @@ class NotificationTemplateRepository @Inject()(@NamedDatabase("fusion") dbConfig
     def templateType = column[Int]("TemplateType")
     def subjectTemplate = column[String]("SubjectTemplate")
     def bodyTemplate = column[String]("BodyTemplate")
-    def mimeType = column[String]("MimeType")
+//    def mimeType = column[String]("MimeType")
     def dateCreated = column[Timestamp]("DateCreated")
     def timeUpdated = column[Timestamp]("TimeUpdated")
 
-    def * = (notificationId.?, mapId.?, languageCode, templateType, subjectTemplate, bodyTemplate, mimeType, dateCreated, timeUpdated) <>
+    def * = (notificationId.?, mapId.?, languageCode, templateType, subjectTemplate, bodyTemplate, dateCreated, timeUpdated) <>
       (NotificationTemplate.tupled, NotificationTemplate.unapply)
   }
 
@@ -57,6 +57,6 @@ class NotificationTemplateRepository @Inject()(@NamedDatabase("fusion") dbConfig
 object NotificationMappings extends Enumeration {
   type NotificationMappings = Value
 
-  val EMAIL_VERIFICATION = Value(271, "emailVerification")
-  val FORGOT_PASSWORD_EMAIL = Value(273, "forgotPasswordEmail")
+  val EMAIL_VERIFICATION = Value(72, "emailVerification")
+  val FORGOT_PASSWORD_EMAIL = Value(74, "forgotPasswordEmail")
 }

@@ -29,7 +29,10 @@ libraryDependencies ++= Seq(
   // Logging
   "net.logstash.logback" % "logstash-logback-encoder" % "4.7",
   // Nexus dependencies
-  "me.mig" %% "matter-stream" % "1.0.2"
+  "me.mig" %% "matter-stream" % "1.0.2",
+  // Gatling
+  "io.gatling.highcharts" % "gatling-charts-highcharts" % "2.2.2" % "test",
+  "io.gatling"            % "gatling-test-framework"    % "2.2.2" % "test"
 )
 
 // Exclude commons-logging since Play has jcl-over-slf4j, which re-implements the logging API.
@@ -90,8 +93,18 @@ lazy val customMergeStrategy: String => MergeStrategy = {
   case s => MergeStrategy.defaultMergeStrategy(s)
 }
 
+// Gatling testing
+lazy val GTest = config("gatling") extend (Test)
+
 lazy val mars = (project in file(".")).
   enablePlugins(PlayScala).
+  enablePlugins(GatlingPlugin).
+  configs(GTest).
+  settings(inConfig(GTest)(Defaults.testSettings): _*).
+  settings(
+    scalaSource in GTest := baseDirectory.value / "/test",
+    dependencyOverrides += "org.asynchttpclient" % "async-http-client" % "2.0.10" % Test
+  ).
   settings(commonSettings: _*).
   settings(
     mainClass in assembly := Some("play.core.server.ProdServerStart"),
