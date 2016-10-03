@@ -5,6 +5,9 @@ addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.3")
 // The Play plugin
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.5.8")
 
+// Gatling plugin
+addSbtPlugin("io.gatling" % "gatling-sbt" % "2.2.0")
+
 // web plugins
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-coffeescript" % "1.0.0")
