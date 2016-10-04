@@ -5,7 +5,7 @@ import play.api.libs.json.{JsResultException, Json}
 import play.api.mvc.Results._
 import play.api.mvc.{RequestHeader, Result}
 import play.api.routing.Router
-import play.api.{Configuration, Environment, OptionalSourceMapper}
+import play.api.{Configuration, Environment, Logger, OptionalSourceMapper}
 
 import scala.concurrent.Future
 
@@ -27,7 +27,9 @@ class ErrorHandler @Inject()(
 
   override def onServerError(request: RequestHeader, exception: Throwable): Future[Result] = {
     exception match {
-      case ex: JsResultException => Future.successful(BadRequest(toJson("Invalid input parameters")))
+      case ex: JsResultException =>
+        Logger.warn("Invalid input parameters: " + ex.getMessage)
+        Future.successful(BadRequest(toJson("Invalid input parameters")))
       case _ => super.onServerError(request, exception)
     }
   }
