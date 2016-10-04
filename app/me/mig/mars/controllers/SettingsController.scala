@@ -15,7 +15,7 @@ import play.api.mvc.{Action, Results}
   * Created by jameshsiao on 9/2/16.
   */
 @Singleton
-class SettingsController @Inject()(system: ActorSystem, materializer: Materializer, emailService: EmailService) {
+class SettingsController @Inject()(emailService: EmailService)(implicit system: ActorSystem, materializer: Materializer) {
 
   def handleForgotPassword = Action.async(parse.json) { request =>
     val forgotPasswordSource = Source.single[ForgotPassword](request.body.validate[ForgotPassword] match {
@@ -25,7 +25,7 @@ class SettingsController @Inject()(system: ActorSystem, materializer: Materializ
     forgotPasswordSource.map(forgot => emailService.sendForgotPasswordEmail(forgot))
       .via(serializeToJsonResponse)
       .map( result => Results.Status(result._1)(result._2) )
-      .runWith(Sink.head)(materializer)
+      .runWith(Sink.head)
 //    response
   }
 }
