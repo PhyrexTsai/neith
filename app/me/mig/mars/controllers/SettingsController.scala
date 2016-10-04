@@ -7,7 +7,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import me.mig.mars.services.EmailService
 import me.mig.mars.services.EmailService._
-import play.api.libs.json.{JsError, JsResultException, JsSuccess}
 import play.api.mvc.BodyParsers.parse
 import play.api.mvc.{Action, Results}
 

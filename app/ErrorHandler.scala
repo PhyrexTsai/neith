@@ -1,6 +1,6 @@
 import javax.inject.{Inject, Provider, Singleton}
 
-import play.api.http.{DefaultHttpErrorHandler, HttpErrorHandler}
+import play.api.http.DefaultHttpErrorHandler
 import play.api.libs.json.{JsResultException, Json}
 import play.api.mvc.Results._
 import play.api.mvc.{RequestHeader, Result}
@@ -28,7 +28,7 @@ class ErrorHandler @Inject()(
   override def onServerError(request: RequestHeader, exception: Throwable): Future[Result] = {
     exception match {
       case ex: JsResultException => Future.successful(BadRequest(toJson("Invalid input parameters")))
-      case _ => Future.successful(InternalServerError(toJson("A server error occurred: " + exception.getMessage)))
+      case _ => super.onServerError(request, exception)
     }
   }
 }
