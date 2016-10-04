@@ -18,10 +18,7 @@ import play.api.mvc.{Action, Results}
 class SettingsController @Inject()(emailService: EmailService)(implicit system: ActorSystem, materializer: Materializer) {
 
   def handleForgotPassword = Action.async(parse.json) { request =>
-    val forgotPasswordSource = Source.single[ForgotPassword](request.body.validate[ForgotPassword] match {
-      case js: JsSuccess[ForgotPassword] => js.get
-      case err: JsError => throw new JsResultException(err.errors)
-    })
+    val forgotPasswordSource = Source.single[ForgotPassword](request.body.as[ForgotPassword])
     forgotPasswordSource.map(forgot => emailService.sendForgotPasswordEmail(forgot))
       .via(serializeToJsonResponse)
       .map( result => Results.Status(result._1)(result._2) )
