@@ -4,12 +4,11 @@ import java.io.{File, IOException}
 import java.net.URLClassLoader
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.Calendar
 
 import akka.actor.{Actor, Props}
 import com.typesafe.config.Config
-import me.mig.mars.services.TemplateBackgroundService
 import me.mig.mars.models.NotificationTemplateRepository
+import me.mig.mars.services.{EmailTemplate, TemplateBackgroundService}
 import play.api.Logger
 import play.twirl.api.Html
 import play.twirl.compiler.{GeneratedSource, TwirlCompiler}
@@ -98,7 +97,7 @@ class TemplateChecker(config: Config, emailTemplateRepo: NotificationTemplateRep
               }
             }
 
-            templateBackgroundService.put(className, new CompiledTemplate[T](className), Calendar.getInstance().getTimeInMillis)
+            templateBackgroundService.put(className, EmailTemplate(template.subjectTemplate, new CompiledTemplate(className), System.currentTimeMillis()))
             Logger.info("Template " + className + " updated.")
           }
         }
@@ -157,17 +156,17 @@ object TemplateChecker {
 
   case class CompilationError(message: String, line: Int, column: Int) extends RuntimeException(message)
 
-  class CompiledTemplate[T](className: String)(implicit val classLoader: ClassLoader) {
+  class CompiledTemplate(className: String)(implicit val classLoader: ClassLoader) {
 
     private def getF(template: Any) = {
-      template.getClass.getMethod("f").invoke(template).asInstanceOf[T]
+      template.getClass.getMethod("f").invoke(template).asInstanceOf[List[String] => Html]
     }
 
-    def static: T = {
+    def static: List[String] => Html = {
       getF(classLoader.loadClass(className + "$").getDeclaredField("MODULE$").get(null))
     }
 
-    def inject(constructorArgs: Any*): T = {
+    def inject(constructorArgs: Any*): List[String] => Html = {
       classLoader.loadClass(className).getConstructors match {
         case Array(single) => getF(single.newInstance(constructorArgs.asInstanceOf[Seq[AnyRef]]: _*))
         case other => throw new IllegalStateException(className + " does not declare exactly one constructor: " + other)

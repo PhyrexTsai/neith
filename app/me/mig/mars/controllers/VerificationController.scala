@@ -3,7 +3,7 @@ package me.mig.mars.controllers
 import javax.inject._
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import me.mig.mars.services.EmailService
 import play.api.mvc._
@@ -17,11 +17,10 @@ import scala.collection.immutable.Iterable
  * object is injected by the Guice dependency injection system.
  */
 @Singleton
-class VerificationController @Inject()(system: ActorSystem, emailService: EmailService) extends Controller {
+class VerificationController @Inject()(emailService: EmailService)(implicit system: ActorSystem, materializer: Materializer) extends Controller {
   import EmailService._
 
   import scala.concurrent.ExecutionContext.Implicits.global
-  implicit val materializer = ActorMaterializer()(system)
 
   /**
    * Create an action that responds with the [[EmailService]]'s current
