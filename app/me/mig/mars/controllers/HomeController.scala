@@ -12,13 +12,10 @@ import play.api.mvc._
 class HomeController @Inject() extends Controller {
 
   /**
-    * Create an Action to render an HTML page with a welcome message.
-    * The configuration in the `routes` file means that this method
-    * will be called when the application receives a `GET` request with
-    * a path of `/`.
+    * Always redirect to the service health checking page since we don't need the home page now.
     */
   def index = Action {
-    Ok(me.mig.mars.views.html.index("Your new application is ready."))
+    Redirect("/health")
   }
 
 }

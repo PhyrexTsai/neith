@@ -2,7 +2,7 @@ import javax.inject._
 
 import me.mig.mars.filters.LoggingFilter
 import play.api._
-import play.api.http.HttpFilters
+import play.api.http.DefaultHttpFilters
 
 /**
  * This class configures filters that run on every request. This
@@ -18,15 +18,4 @@ import play.api.http.HttpFilters
  * each response.
  */
 @Singleton
-class Filters @Inject() (
-  env: Environment,
-  loggingFilter: LoggingFilter) extends HttpFilters {
-
-  override val filters = {
-    // Use the example filter if we're running development mode. If
-    // we're running in production or test mode then don't use any
-    // filters at all.
-    if (env.mode == Mode.Dev) Seq(loggingFilter) else Seq.empty
-  }
-
-}
+class Filters @Inject() (env: Environment, loggingFilter: LoggingFilter) extends DefaultHttpFilters(loggingFilter)

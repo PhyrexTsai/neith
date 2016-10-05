@@ -32,7 +32,7 @@ class TemplateBackgroundService @Inject()(system: ActorSystem, configuration: Co
 
   def get[T](className: String): (String, CompiledTemplate) = {
     val compiledTemplate = templates.get(templateClassPrefix + className)
-    if (compiledTemplate isEmpty) null
+    if (compiledTemplate isEmpty) ("", null)
     else {
       val templateObj = compiledTemplate.get
       (templateObj.subject, templateObj.template)
