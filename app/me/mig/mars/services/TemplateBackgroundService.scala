@@ -3,8 +3,9 @@ package me.mig.mars.services
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import me.mig.mars.workers.TemplateChecker
 import me.mig.mars.models.NotificationTemplateRepository
+import me.mig.mars.workers.TemplateChecker
+import me.mig.mars.workers.TemplateChecker.CompiledTemplate
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 
@@ -22,26 +23,30 @@ class TemplateBackgroundService @Inject()(system: ActorSystem, configuration: Co
 
   import scala.concurrent.duration._
 
-  var templates = mutable.HashMap[String, (Any, Long)]()
+  var templates = mutable.HashMap[String, EmailTemplate]()
   val templateConfig = configuration.underlying.getConfig("mars.templates")
 
   // Dynamically build templates @runtime
   // Start scheduler to check email templates if need to rebuild every 5 mins.
   val cancelable = system.scheduler.schedule(0 seconds, 300 seconds, system.actorOf(TemplateChecker.props(templateConfig, emailTemplateRepo, this)), ScheduledCheck)
 
-  def get[T](className: String): CompiledTemplate[T] = {
+  def get[T](className: String): (String, CompiledTemplate) = {
     val compiledTemplate = templates.get(templateClassPrefix + className)
     if (compiledTemplate isEmpty) null
-    else compiledTemplate.get._1.asInstanceOf[CompiledTemplate[T]]
+    else {
+      val templateObj = compiledTemplate.get
+      (templateObj.subject, templateObj.template)
+    }
   }
-  def put(className: String, template: Any, lastUpdated: Long): Unit = {
-    templates.put(className, (template, lastUpdated))
+
+  def put(className: String, template: EmailTemplate): Unit = {
+    templates.put(className, template)
   }
 
   def isTemplateUpdated(className: String, updatedTime: Long): Boolean = {
     templates.get(className) match {
-      case Some((template, lastUpdated)) =>
-        updatedTime > lastUpdated
+      case Some(emailTemplate) =>
+        updatedTime > emailTemplate.lastUpdated
       case None => true
     }
   }
@@ -50,3 +55,5 @@ class TemplateBackgroundService @Inject()(system: ActorSystem, configuration: Co
     Future.successful(cancelable.cancel())
   }
 }
+
+case class EmailTemplate(subject: String, template: CompiledTemplate, lastUpdated: Long)

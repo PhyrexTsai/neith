@@ -4,13 +4,13 @@ import javax.inject._
 
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Flow
+import me.mig.mars.BaseResponse
 import me.mig.mars.models.NotificationMappings._
 import org.apache.commons.mail.EmailException
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.mailer.{Email, MailerClient}
-import play.twirl.api.Html
 
 import scala.concurrent.Future
 
@@ -33,15 +33,15 @@ class EmailService @Inject()(system: ActorSystem, appLifecycle: ApplicationLifec
   import me.mig.mars.services.EmailService._
 
   def sendVerifyEmail(toVerify: EmailVerification): SendEmailAck = {
-    sendEmailByTemplate(EMAIL_VERIFICATION, "Activate your migme account", List(toVerify.username, toVerify.verifyLink), Seq(toVerify.email))
+    sendEmailByTemplate(EMAIL_VERIFICATION, List(toVerify.username, toVerify.verifyLink), Seq(toVerify.email))
   }
 
   def sendForgotPasswordEmail(toReset: ForgotPassword): SendEmailAck = {
-    sendEmailByTemplate(FORGOT_PASSWORD_EMAIL, "Reset your password", List(toReset.username, toReset.resetLink), Seq(toReset.email))
+    sendEmailByTemplate(FORGOT_PASSWORD_EMAIL, List(toReset.username, toReset.resetLink), Seq(toReset.email))
   }
 
-  def sendEmailByTemplate(templateType: NotificationMappings, subject: String, parameters: List[String], recipients: Seq[String]): SendEmailAck = {
-    val emailTemplate = templateBackgroundService.get[List[String] => Html](templateType.toString)
+  def sendEmailByTemplate(templateType: NotificationMappings, parameters: List[String], recipients: Seq[String]): SendEmailAck = {
+    val (subject, emailTemplate) = templateBackgroundService.get(templateType.toString)
     if (emailTemplate == null) {
       SendEmailAck(error = Some("Can't load template now, please try again later."))
     } else {
@@ -83,9 +83,7 @@ class EmailService @Inject()(system: ActorSystem, appLifecycle: ApplicationLifec
   }
 }
 
-trait BaseResponse {
-  val error: Option[String]
-}
+
 
 object EmailService {
   final val NOT_REPLY_SENDER = "Migme <donotreply@mig.me>"
