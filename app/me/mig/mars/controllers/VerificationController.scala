@@ -8,8 +8,6 @@ import akka.stream.scaladsl.{Sink, Source}
 import me.mig.mars.services.EmailService
 import play.api.mvc._
 
-import scala.collection.immutable.Iterable
-
 /**
  * This controller demonstrates how to use dependency injection to
  * bind a component into a controller class. The class creates an
@@ -28,8 +26,10 @@ class VerificationController @Inject()(emailService: EmailService)(implicit syst
    * `GET /count` requests by an entry in the `routes` config file.
    */
   def verifyByEmail = Action.async(parse.json) { request =>
-    val verifySource = Source[EmailVerification](Iterable(request.body.as[EmailVerification]))
-    val response = verifySource.map(verify => emailService.sendVerifyEmail(verify)).via(serializeToJsonResponse).runWith(Sink.head)
-    response.map( result => Results.Status(result._1)(result._2) )
+    Source.single(request.body.as[EmailVerification])
+      .map(verify => emailService.sendVerifyEmail(verify))
+      .via(serializeToJsonResponse)
+      .runWith(Sink.head)
+      .map( result => Results.Status(result._1)(result._2) )
   }
 }

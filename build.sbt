@@ -8,7 +8,9 @@ name := """mars"""
 
 scalaVersion in Global := "2.11.8"
 
-val akkaVersion = "2.4.9"
+val akkaVersion = "2.4.14"
+
+resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases/"
 
 libraryDependencies ++= Seq(
 //  jdbc,
@@ -16,20 +18,25 @@ libraryDependencies ++= Seq(
   ws,
   "org.scala-lang" % "scala-compiler" % scalaVersion.value,
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % Test,
+  "org.mockito" % "mockito-core" % "2.3.3" % Test,
   "im.actor" % "akka-scalapb-serialization_2.11" % "0.1.14",
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster" % akkaVersion,
   "com.typesafe.akka" %% "akka-cluster-tools" % akkaVersion,
-  "com.typesafe.akka" %% "akka-stream-kafka" % "0.11-RC1",
+  "com.typesafe.akka" %% "akka-stream-kafka" % "0.13",
   "com.typesafe.play" %% "play-mailer" % "5.0.0",
-  "com.typesafe.play" % "twirl-compiler_2.11" % "1.2.0",
+  "com.typesafe.play" %% "twirl-compiler" % "1.2.0",
   // Datastores
   "mysql" % "mysql-connector-java" % "5.1.34",
   "com.typesafe.play" %% "play-slick" % "2.0.2",
+  "com.github.etaty" %% "rediscala" % "1.7.0",
+  // Amazon SNS SDK
+  "com.amazonaws" % "aws-java-sdk" % "1.11.46",
   // Logging
   "net.logstash.logback" % "logstash-logback-encoder" % "4.7",
   // Nexus dependencies
-  "me.mig" %% "matter-stream" % "1.0.2",
+  "me.mig.matter-stream" %% "notification" % "1.0.14",
+  "me.mig.matter-stream" %% "reactiveio" % "1.0.14",
   // Gatling
   "io.gatling.highcharts" % "gatling-charts-highcharts" % "2.2.2" % "test",
   "io.gatling"            % "gatling-test-framework"    % "2.2.2" % "test"
@@ -83,6 +90,7 @@ lazy val jira = SettingKey[String]("jira", "The JIRA issue parameter to be propa
 lazy val commonSettings = Seq(
   organization := "me.mig.mars",
   version := (version in ThisBuild).value,
+  scalaVersion := "2.11.8",
   jira := sys.props.get("JIRA").getOrElse("QA-XXX")
 )
 // Use defaultMergeStrategy with a case for aop.xml

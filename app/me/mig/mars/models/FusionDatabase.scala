@@ -24,7 +24,7 @@ case class NotificationTemplate(
                                  timeUpdated: Timestamp )
 
 @Singleton
-class NotificationTemplateRepository @Inject()(@NamedDatabase("fusion") dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) {
+class FusionDatabase @Inject()(@NamedDatabase("fusion") dbConfigProvider: DatabaseConfigProvider)(implicit ec: ExecutionContext) {
 
   private val dbConfig = dbConfigProvider.get[JdbcProfile]
 

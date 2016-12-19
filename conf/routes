@@ -4,10 +4,13 @@
 
 # An example controller showing a sample home page
 GET     /                           me.mig.mars.controllers.HomeController.index
-# An example controller showing how to use dependency injection
+# The API routes of Verification controller
 POST    /sendVerificationEmail      me.mig.mars.controllers.VerificationController.verifyByEmail
-# An example controller showing how to use dependency injection
+# The API routes of Settings controller
 POST    /sendForgotPasswordEmail    me.mig.mars.controllers.SettingsController.handleForgotPassword
+# The API routes of JobSchedule controller
+POST    /jobs                       me.mig.mars.controllers.JobScheduleController.createJob
+GET     /jobs                       me.mig.mars.controllers.JobScheduleController.getJobs
 # An example controller showing how to write asynchronous code
 GET     /health                     me.mig.mars.controllers.HealthController.message
 

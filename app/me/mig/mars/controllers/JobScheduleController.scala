@@ -1,0 +1,40 @@
+package me.mig.mars.controllers
+
+import javax.inject.{Inject, Singleton}
+
+import akka.actor.ActorSystem
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
+import me.mig.mars.ErrorHandler
+import me.mig.mars.services.JobScheduleService
+import me.mig.mars.services.JobScheduleService.{CreateJob, CreateJobAck, GetJobs}
+import play.api.libs.json.Json
+import play.api.mvc.{Action, Controller}
+
+/**
+  * Created by jameshsiao on 12/13/16.
+  */
+@Singleton
+class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, system: ActorSystem, implicit val materializer: Materializer) extends Controller {
+  import system.dispatcher
+
+  def createJob = Action.async(ErrorHandler.validateJson[CreateJob]) { request =>
+      Source.single(request.body)
+        .via(jobScheduleService.createJob)
+        .recover {
+          case x => CreateJobAck(false, Some("Creating a scheduled job encounters error: " + x.getMessage ))
+        }
+        .runWith(Sink.head)
+        .map(result => result.success match {
+          case true => Ok(Json.toJson(result))
+          case false => BadRequest(Json.toJson(result))
+        })
+  }
+
+  def getJobs = Action.async(ErrorHandler.validateJson[GetJobs]) { request =>
+    Source.single(request.body)
+      .runWith(Sink.head)
+      .map(result => Ok(Json.toJson(result)))
+  }
+
+}

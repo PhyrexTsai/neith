@@ -1,5 +1,5 @@
 import com.google.inject.AbstractModule
-import me.mig.mars.services.{EmailService, TemplateBackgroundService}
+import me.mig.mars.services.{EmailService, JobScheduleService, PushNotificationService, TemplateBackgroundService}
 
 /**
  * This class is a Guice module that tells Guice how to bind several
@@ -17,9 +17,11 @@ class Module extends AbstractModule {
     // Ask Guice to create an instance of TemplateBackgroundService when the
     // application starts.
     bind(classOf[TemplateBackgroundService]).asEagerSingleton()
-    // Ask Guice to create an instance of EmailService when the
+    // Ask Guice to create an instance of EmailService and PushNotificationService when the
     // application starts.
     bind(classOf[EmailService]).asEagerSingleton()
+    bind(classOf[PushNotificationService]).asEagerSingleton()
+    bind(classOf[JobScheduleService]).asEagerSingleton()
   }
 
 }
