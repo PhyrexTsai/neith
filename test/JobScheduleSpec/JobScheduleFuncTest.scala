@@ -26,7 +26,7 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       val interval = 2 minutes
       val result = route(app, fakeRequest
         .withJsonBody(
-          Json.toJson(CreateJob(startTime.getMillis, interval.toMillis, NotificationType.PUSH.id))
+          Json.toJson(CreateJob(1, 1, startTime.getMillis, interval.toMillis, NotificationType.PUSH.toString, "job1"))
         )
       ).get
 
@@ -46,7 +46,7 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       val interval = 1 minutes
       val result = route(app, fakeRequest
         .withJsonBody(
-          Json.toJson(CreateJob(startTime, interval.toMillis, 99))
+          Json.toJson(CreateJob(1, 1, startTime, interval.toMillis, "None", "job2"))
         )
       ).get
 

@@ -7,7 +7,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import me.mig.mars.ErrorHandler
 import me.mig.mars.services.JobScheduleService
-import me.mig.mars.services.JobScheduleService.{CreateJob, CreateJobAck, GetJobs}
+import me.mig.mars.services.JobScheduleService._
+import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 
@@ -31,8 +32,10 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
         })
   }
 
-  def getJobs = Action.async(ErrorHandler.validateJson[GetJobs]) { request =>
-    Source.single(request.body)
+  def getJobs(id: Int, page: Option[Int], pageSize: Option[Int]) = Action.async { request =>
+    Logger.info("id: " + id)
+    Source.single(id)
+      .via(jobScheduleService.getJobs)
       .runWith(Sink.head)
       .map(result => Ok(Json.toJson(result)))
   }

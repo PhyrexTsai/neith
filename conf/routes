@@ -10,7 +10,8 @@ POST    /sendVerificationEmail      me.mig.mars.controllers.VerificationControll
 POST    /sendForgotPasswordEmail    me.mig.mars.controllers.SettingsController.handleForgotPassword
 # The API routes of JobSchedule controller
 POST    /jobs                       me.mig.mars.controllers.JobScheduleController.createJob
-GET     /jobs                       me.mig.mars.controllers.JobScheduleController.getJobs
+GET     /jobs                       me.mig.mars.controllers.JobScheduleController.getJobs(id: Int = 0, page: Option[Int], pageSize: Option[Int])
+GET     /jobs/:id                   me.mig.mars.controllers.JobScheduleController.getJobs(id: Int, page: Option[Int], pageSize: Option[Int])
 # An example controller showing how to write asynchronous code
 GET     /health                     me.mig.mars.controllers.HealthController.message
 

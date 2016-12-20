@@ -23,7 +23,7 @@ class PushNotificationProcessor(config: Config, db: FusionDatabase)(implicit val
   }
 
   private def handleRenewToken(renewToken: RenewToken) = {
-    renewToken.tokenType match  {
+    renewToken.tokenType match {
       case PushNotificationType.GCM =>
         Source.fromFuture[Int](db.updateGcmRegToken(renewToken.userId, renewToken.originalToken, renewToken.newToken))
       case PushNotificationType.APNS =>

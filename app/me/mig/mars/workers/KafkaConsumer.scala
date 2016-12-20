@@ -26,16 +26,18 @@ class KafkaConsumer(config: Config, system: ActorSystem, implicit val materializ
     .withGroupId("group1")
     .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
-  val db = new DB
-  db.loadOffset().foreach { fromOffset =>
-    val partition = 0
-    val subscription = Subscriptions.assignmentWithOffset(
-      new TopicPartition("TestTopic", partition) -> fromOffset
-    )
-    val done =
-      Consumer.plainSource(consumerSettings, subscription)
-        .mapAsync(1)(db.save)
-        .runWith(Sink.ignore)
+  def testConsume() = {
+    val db = new DB
+    db.loadOffset().foreach { fromOffset =>
+      val partition = 0
+      val subscription = Subscriptions.assignmentWithOffset(
+        new TopicPartition("TestTopic", partition) -> fromOffset
+      )
+      val done =
+        Consumer.plainSource(consumerSettings, subscription)
+          .mapAsync(1)(db.save)
+          .runWith(Sink.ignore)
+    }
   }
 }
 

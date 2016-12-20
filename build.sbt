@@ -29,6 +29,7 @@ libraryDependencies ++= Seq(
   // Datastores
   "mysql" % "mysql-connector-java" % "5.1.34",
   "com.typesafe.play" %% "play-slick" % "2.0.2",
+  "com.lightbend.akka" %% "akka-stream-alpakka-cassandra" % "0.3",
   "com.github.etaty" %% "rediscala" % "1.7.0",
   // Amazon SNS SDK
   "com.amazonaws" % "aws-java-sdk" % "1.11.46",
