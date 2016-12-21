@@ -6,6 +6,7 @@ import akka.actor.{ActorSystem, Cancellable, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import me.mig.mars.BaseResponse
+import me.mig.mars.models.MarsKeyspace.Job
 import me.mig.mars.models.{FusionDatabase, MarsKeyspace}
 import me.mig.mars.workers.PushNotificationProcessor
 import play.api.inject.ApplicationLifecycle
@@ -65,11 +66,16 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
   }
 
   def getJobs(): Flow[Int, GetJobsAck, _] = {
-    Flow[Int].map(id => {
-      if (id > 0)
-        GetJobsAck(id)
-      else
-        GetJobsAck(9999)
+    Flow[Int].mapAsync(2)(id => {
+      if (id > 0) {
+        Future.successful(GetJobsAck(List.empty))
+      }
+      else {
+        keyspace.getJobs().transform(
+          jobs => GetJobsAck(jobs),
+          ex => ex
+        )
+      }
     })
   }
 
@@ -81,10 +87,10 @@ object JobScheduleService {
 
   /** Json requests/responses **/
   // Requests
-  case class CreateJob(label: Int, country: Int, startTime: Long, interval: Long, notificationType: String, message: String)
+  case class CreateJob(label: List[Int], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Long = 60000, notificationType: String, message: String, callToAction: Map[String, String])
   // Responses
   case class CreateJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
-  case class GetJobsAck(id: Int, override val error: Option[String] = None) extends BaseResponse
+  case class GetJobsAck(data: List[Job], override val error: Option[String] = None) extends BaseResponse
 
   // Json Reads
   implicit val CreateJobReads = Json.reads[CreateJob]
@@ -92,5 +98,6 @@ object JobScheduleService {
   // Json Writes
   implicit val CreateJobWrites = Json.writes[CreateJob] // Only for test
   implicit val CreateJobAckWrites = Json.writes[CreateJobAck]
+  implicit val JobsWrites = Json.writes[Job]
   implicit val GetJobsAckWrites = Json.writes[GetJobsAck]
 }

@@ -36,8 +36,14 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
     Logger.info("id: " + id)
     Source.single(id)
       .via(jobScheduleService.getJobs)
+      .recover {
+        case x => GetJobsAck(List.empty, Some("Getting job list encounters error: " + x.getMessage))
+      }
       .runWith(Sink.head)
-      .map(result => Ok(Json.toJson(result)))
+      .map(result => result.error match {
+        case None => Ok(Json.toJson(result))
+        case _ => BadRequest(Json.toJson(result))
+      })
   }
 
 }
