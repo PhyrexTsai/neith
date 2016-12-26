@@ -8,7 +8,6 @@ import akka.stream.scaladsl.{Sink, Source}
 import me.mig.mars.ErrorHandler
 import me.mig.mars.services.JobScheduleService
 import me.mig.mars.services.JobScheduleService._
-import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 
@@ -32,8 +31,7 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
         })
   }
 
-  def getJobs(id: Int, page: Option[Int], pageSize: Option[Int]) = Action.async { request =>
-    Logger.info("id: " + id)
+  def getJobs(id: String, page: Option[Int], pageSize: Option[Int]) = Action.async { request =>
     Source.single(id)
       .via(jobScheduleService.getJobs)
       .recover {
