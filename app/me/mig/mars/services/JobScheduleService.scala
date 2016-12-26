@@ -7,7 +7,7 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import me.mig.mars.BaseResponse
-import me.mig.mars.models.JobModel.Job
+import me.mig.mars.models.JobModel.{DispatchJob, Job}
 import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.workers.PushNotificationProcessor
@@ -26,7 +26,7 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
   import JobScheduleService._
   import system.dispatcher
 
-  // TODO: loading stored jobs and dispatching...
+  // Loading stored jobs and scheduling to dispatch...
   Logger.info("Starting JobScheduleService to load jobs...")
   Source.single("").via(getJobs).map(
     jobsAck => {
@@ -78,7 +78,7 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
       keyspace.createJob(job).recover {
         case x: Throwable =>
           Logger.error("Creating job into cassandra encounters error: " + x.getMessage)
-          null
+          None
       }.map {
         case jobId: UUID =>
           Logger.info("Job created: " + jobId)
@@ -114,9 +114,6 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
 }
 
 object JobScheduleService {
-
-  case class DispatchJob(jobId: UUID)
-
   /** Json requests/responses **/
   // Requests
   case class CreateJob(label: List[Short], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Long = 60000, notificationType: String, message: String, callToAction: Map[String, String])

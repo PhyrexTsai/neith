@@ -17,5 +17,6 @@ object JobModel {
                  message: String,
                  callToAction: Map[String, String])
   case class NextJob(id: UUID, startTime: Timestamp)
+  case class DispatchJob(jobId: UUID)
   case class JobToken(userId: Int, username: Option[String], gcmToken: Option[String], iosToken: Option[Array[Byte]])
 }

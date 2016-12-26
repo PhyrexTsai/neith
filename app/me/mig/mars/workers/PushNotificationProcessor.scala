@@ -5,11 +5,10 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.typesafe.config.Config
 import me.mig.mars.event.MarsCommand.{PushNotificationType, RenewToken}
-import me.mig.mars.models.JobModel.JobToken
+import me.mig.mars.models.JobModel.{DispatchJob, JobToken}
 import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.repositories.mysql.FusionDatabase
-import me.mig.mars.services.JobScheduleService.DispatchJob
 import play.api.Logger
 
 /**
