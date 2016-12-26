@@ -21,6 +21,8 @@ import scala.concurrent.duration._
 class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
 
   implicit lazy val materializer: Materializer = app.materializer
+  implicit val CreateJobAckReads = Json.reads[CreateJobAck]
+  implicit val CreateJobWrites = Json.writes[CreateJob]
 
   "RESTful POST /createJob" should {
     val fakeRequest = FakeRequest(POST, "/createJob")
@@ -30,7 +32,7 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       val interval = 2 minutes
       val result = route(app, fakeRequest
         .withJsonBody(
-          Json.toJson(CreateJob(List(1), List(3, 6), startTime.getMillis, None, interval.toMillis, NotificationType.PUSH.toString, "job1", HashMap("web" -> "yes")))
+          Json.toJson(CreateJob("TestJob", List(1), List(3, 6), startTime.getMillis, None, interval.toMillis, NotificationType.PUSH.toString, "job1", HashMap("web" -> "yes")))
         )
       ).get
 
@@ -50,7 +52,7 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       val interval = 1 minutes
       val result = route(app, fakeRequest
         .withJsonBody(
-          Json.toJson(CreateJob(List(1), List(4, 8), startTime, None, interval.toMillis, "None", "job2", HashMap("hi" -> "five")))
+          Json.toJson(CreateJob("TestInvalidJob", List(1), List(4, 8), startTime, None, interval.toMillis, "None", "job2", HashMap("hi" -> "five")))
         )
       ).get
 
@@ -66,7 +68,7 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       ))
 
       val fusionDb = Application.instanceCache[FusionDatabase].apply(app)
-      val results = Await.result(fusionDb.getUsersByLabel(1), 15 seconds)
+      val results = Await.result(fusionDb.getUserTokensByLabelAndCountry(List(1), List(4, 8)), 15 seconds)
       Logger.info("results: " + results)
     }
   }

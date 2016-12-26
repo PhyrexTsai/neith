@@ -1,6 +1,5 @@
 package me.mig.mars.services
 
-import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.{ActorSystem, Cancellable}
@@ -49,7 +48,7 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
     }
   ).to(Sink.ignore).run()
 
-  private def scheduleJob(jobId: UUID, delay: Long, interval: Long): Unit = {
+  private def scheduleJob(jobId: String, delay: Long, interval: Long): Unit = {
     val cancellable = system.scheduler.schedule(
       FiniteDuration(delay, MILLISECONDS),
       FiniteDuration(interval, MILLISECONDS),
@@ -80,7 +79,7 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
           Logger.error("Creating job into cassandra encounters error: " + x.getMessage)
           None
       }.map {
-        case jobId: UUID =>
+        case jobId: String =>
           Logger.info("Job created: " + jobId)
           val delay = job.startTime - System.currentTimeMillis()
           scheduleJob(jobId, delay, job.interval)
@@ -96,7 +95,7 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
   def getJobs(): Flow[String, GetJobsAck, _] = {
     Flow[String].mapAsync(2)(id => {
       if (id.nonEmpty) {
-        keyspace.getJobs(Some(UUID.fromString(id)))
+        keyspace.getJobs(Some(id))
           .transform(
             jobs => GetJobsAck(jobs),
             ex => ex
@@ -116,16 +115,14 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
 object JobScheduleService {
   /** Json requests/responses **/
   // Requests
-  case class CreateJob(label: List[Short], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Long = 60000, notificationType: String, message: String, callToAction: Map[String, String])
+  case class CreateJob(id: String, label: List[Short], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Long = 60000, notificationType: String, message: String, callToAction: Map[String, String])
   // Responses
   case class CreateJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
   case class GetJobsAck(data: List[Job], override val error: Option[String] = None) extends BaseResponse
 
   // Json Reads
   implicit val CreateJobReads = Json.reads[CreateJob]
-  implicit val CreateJobAckReads = Json.reads[CreateJobAck] // Only for test
   // Json Writes
-  implicit val CreateJobWrites = Json.writes[CreateJob] // Only for test
   implicit val CreateJobAckWrites = Json.writes[CreateJobAck]
   implicit val JobsWrites = Json.writes[Job]
   implicit val GetJobsAckWrites = Json.writes[GetJobsAck]
