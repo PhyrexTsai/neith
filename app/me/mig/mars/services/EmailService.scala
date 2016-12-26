@@ -5,7 +5,7 @@ import javax.inject._
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Flow
 import me.mig.mars.BaseResponse
-import me.mig.mars.models.NotificationMappings._
+import me.mig.mars.repositories.mysql.NotificationMappings._
 import org.apache.commons.mail.EmailException
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle

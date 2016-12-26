@@ -4,7 +4,7 @@ import javax.inject._
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import me.mig.mars.models.FusionDatabase
+import me.mig.mars.repositories.mysql.FusionDatabase
 import play.api.Logger
 
 /**

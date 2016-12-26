@@ -2,13 +2,17 @@ package JobScheduleSpec
 
 import akka.stream.Materializer
 import me.mig.mars.models.NotificationType
+import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.services.JobScheduleService.{CreateJob, CreateJobAck}
 import org.joda.time.DateTime
 import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
+import play.api.{Application, Logger}
 import play.api.libs.json.Json
-import play.api.test.FakeRequest
+import play.api.test.{FakeApplication, FakeRequest}
 import play.api.test.Helpers._
 
+import scala.collection.immutable.HashMap
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 /**
@@ -26,7 +30,7 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       val interval = 2 minutes
       val result = route(app, fakeRequest
         .withJsonBody(
-          Json.toJson(CreateJob(1, 1, startTime.getMillis, interval.toMillis, NotificationType.PUSH.toString, "job1"))
+          Json.toJson(CreateJob(List(1), List(3, 6), startTime.getMillis, None, interval.toMillis, NotificationType.PUSH.toString, "job1", HashMap("web" -> "yes")))
         )
       ).get
 
@@ -46,12 +50,24 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       val interval = 1 minutes
       val result = route(app, fakeRequest
         .withJsonBody(
-          Json.toJson(CreateJob(1, 1, startTime, interval.toMillis, "None", "job2"))
+          Json.toJson(CreateJob(List(1), List(4, 8), startTime, None, interval.toMillis, "None", "job2", HashMap("hi" -> "five")))
         )
       ).get
 
       status(result) mustBe BAD_REQUEST
       contentAsString(result) must include ("Creating a scheduled job encounters error:")
+    }
+
+    "Search users with labels" in {
+      val app = FakeApplication(additionalConfiguration = Map(
+        "slick.dbs.default.driver" -> "slick.driver.H2Driver$",
+        "slick.dbs.default.db.driver" -> "org.h2.Driver",
+        "slick.dbs.default.db.url" -> "jdbc:h2:mem:play"
+      ))
+
+      val fusionDb = Application.instanceCache[FusionDatabase].apply(app)
+      val results = Await.result(fusionDb.getUsersByLabel(1), 15 seconds)
+      Logger.info("results: " + results)
     }
   }
 

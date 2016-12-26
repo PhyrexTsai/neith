@@ -7,7 +7,7 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import akka.actor.{Actor, Props}
 import com.typesafe.config.Config
-import me.mig.mars.models.FusionDatabase
+import me.mig.mars.repositories.mysql.{FusionDatabase, NotificationMappings}
 import me.mig.mars.services.{EmailTemplate, TemplateBackgroundService}
 import play.api.Logger
 import play.twirl.api.Html
@@ -24,7 +24,7 @@ import scala.tools.nsc.{Global, Settings}
   */
 class TemplateChecker(config: Config, fusionDB: FusionDatabase, templateBackgroundService: TemplateBackgroundService) extends Actor {
   import TemplateChecker._
-  import me.mig.mars.models.NotificationMappings._
+  import NotificationMappings._
 
   class TemplateBuilder(generatedDir: File, generatedClasses: File) {
     implicit val classloader = new URLClassLoader(Array(generatedClasses.toURI.toURL), Class.forName("play.twirl.compiler.TwirlCompiler").getClassLoader)

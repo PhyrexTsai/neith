@@ -1,13 +1,15 @@
 package me.mig.mars.services
 
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
-import akka.actor.{ActorSystem, Cancellable, Props}
+import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.Materializer
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import me.mig.mars.BaseResponse
-import me.mig.mars.models.MarsKeyspace.Job
-import me.mig.mars.models.{FusionDatabase, MarsKeyspace}
+import me.mig.mars.models.JobModel.{DispatchJob, Job}
+import me.mig.mars.repositories.cassandra.MarsKeyspace
+import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.workers.PushNotificationProcessor
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
@@ -20,11 +22,42 @@ import scala.concurrent.duration._
   * Created by jameshsiao on 12/13/16.
   */
 @Singleton
-class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: ApplicationLifecycle, configuration: Configuration, fusionDB: FusionDatabase, keyspace: MarsKeyspace, implicit val materializer: Materializer) {
+class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: ApplicationLifecycle, configuration: Configuration, implicit val fusionDB: FusionDatabase, implicit val keyspace: MarsKeyspace, implicit val materializer: Materializer) {
   import JobScheduleService._
   import system.dispatcher
 
-  // TODO: load stored jobs and dispatching...
+  // Loading stored jobs and scheduling to dispatch...
+  Logger.info("Starting JobScheduleService to load jobs...")
+  Source.single("").via(getJobs).map(
+    jobsAck => {
+      Logger.info("Loading " + jobsAck.data.size + " jobs")
+      jobsAck.data.map(
+        job => {
+          Logger.debug("job loaded: " + job)
+          val now = System.currentTimeMillis()
+          var delay = job.startTime.getTime - now
+          if (delay < 0) {
+            Logger.info("Start time is before current time, add interval to restart")
+            delay += job.interval
+            keyspace.setNextJob(job.id)
+              .recover{ case ex: Throwable => Logger.error(ex.getMessage) }
+          }
+
+          scheduleJob(job.id, delay, job.interval)
+        }
+      )
+    }
+  ).to(Sink.ignore).run()
+
+  private def scheduleJob(jobId: UUID, delay: Long, interval: Long): Unit = {
+    val cancellable = system.scheduler.schedule(
+      FiniteDuration(delay, MILLISECONDS),
+      FiniteDuration(interval, MILLISECONDS),
+      system.actorOf(PushNotificationProcessor.props(configuration.underlying)),
+      DispatchJob(jobId)
+    )
+    addLifeCycleStopHook(cancellable)
+  }
 
   private def addLifeCycleStopHook(job: Cancellable): Unit = {
     // Application Hooks
@@ -41,21 +74,16 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
       if (job.startTime < System.currentTimeMillis())
         throw new IllegalArgumentException("StartTime is before now.")
 
-      // TODO: store the job into cassandra
+      // Store the job into cassandra
       keyspace.createJob(job).recover {
         case x: Throwable =>
           Logger.error("Creating job into cassandra encounters error: " + x.getMessage)
-          false
+          None
       }.map {
-        case true =>
+        case jobId: UUID =>
+          Logger.info("Job created: " + jobId)
           val delay = job.startTime - System.currentTimeMillis()
-          val cancellable = system.scheduler.schedule(
-            FiniteDuration(delay, MILLISECONDS),
-            FiniteDuration(job.interval, MILLISECONDS),
-            system.actorOf(Props(new PushNotificationProcessor(configuration.underlying, fusionDB))),
-            DispatchJob()
-          )
-          addLifeCycleStopHook(cancellable)
+          scheduleJob(jobId, delay, job.interval)
           CreateJobAck(true)
         case _ =>
           Logger.info("createJob in cassandra failed")
@@ -65,10 +93,14 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
 
   }
 
-  def getJobs(): Flow[Int, GetJobsAck, _] = {
-    Flow[Int].mapAsync(2)(id => {
-      if (id > 0) {
-        Future.successful(GetJobsAck(List.empty))
+  def getJobs(): Flow[String, GetJobsAck, _] = {
+    Flow[String].mapAsync(2)(id => {
+      if (id.nonEmpty) {
+        keyspace.getJobs(Some(UUID.fromString(id)))
+          .transform(
+            jobs => GetJobsAck(jobs),
+            ex => ex
+          )
       }
       else {
         keyspace.getJobs().transform(
@@ -82,12 +114,9 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
 }
 
 object JobScheduleService {
-
-  case class DispatchJob()
-
   /** Json requests/responses **/
   // Requests
-  case class CreateJob(label: List[Int], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Long = 60000, notificationType: String, message: String, callToAction: Map[String, String])
+  case class CreateJob(label: List[Short], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Long = 60000, notificationType: String, message: String, callToAction: Map[String, String])
   // Responses
   case class CreateJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
   case class GetJobsAck(data: List[Job], override val error: Option[String] = None) extends BaseResponse

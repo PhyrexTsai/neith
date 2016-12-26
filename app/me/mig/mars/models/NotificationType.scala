@@ -6,8 +6,8 @@ package me.mig.mars.models
 object NotificationType extends Enumeration {
   type NotificationType = Value
 
-  val EMAIL = Value(1)
-  val SMS = Value(2)
-  val PUSH = Value(3)
-  val ALERT = Value(4)
+  val EMAIL = Value(1, "EMail")
+  val SMS = Value(2, "SMS")
+  val PUSH = Value(3, "Push")
+  val ALERT = Value(4, "Alert")
 }

@@ -3,7 +3,7 @@ package me.mig.mars.services
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import me.mig.mars.models.FusionDatabase
+import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.workers.TemplateChecker
 import me.mig.mars.workers.TemplateChecker.CompiledTemplate
 import play.api.Configuration
