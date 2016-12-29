@@ -6,8 +6,8 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import me.mig.mars.ErrorHandler
+import me.mig.mars.models.JobModel.{CreateJob, CreateJobAck, GetJobsAck}
 import me.mig.mars.services.JobScheduleService
-import me.mig.mars.services.JobScheduleService._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 
@@ -21,27 +21,25 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
   def createJob = Action.async(ErrorHandler.validateJson[CreateJob]) { request =>
       Source.single(request.body)
         .via(jobScheduleService.createJob)
-        .recover {
-          case x => CreateJobAck(false, Some("Creating a scheduled job encounters error: " + x.getMessage ))
-        }
         .runWith(Sink.head)
-        .map(result => result.success match {
-          case true => Ok(Json.toJson(result))
-          case false => BadRequest(Json.toJson(result))
-        })
+        .map( result => Ok(Json.toJson(result)) )
+        .recover {
+          case x => BadRequest(
+            Json.toJson( CreateJobAck(false, Some("Creating a scheduled job encounters error: " + x.getMessage)) )
+          )
+        }
   }
 
   def getJobs(id: String, page: Option[Int], pageSize: Option[Int]) = Action.async { request =>
     Source.single(id)
       .via(jobScheduleService.getJobs)
-      .recover {
-        case x => GetJobsAck(List.empty, Some("Getting job list encounters error: " + x.getMessage))
-      }
       .runWith(Sink.head)
-      .map(result => result.error match {
-        case None => Ok(Json.toJson(result))
-        case _ => BadRequest(Json.toJson(result))
-      })
+      .map( result => Ok(Json.toJson(result)) )
+      .recover {
+        case x => BadRequest(
+          Json.toJson( GetJobsAck(List.empty, Some("Getting job list encounters error: " + x.getMessage)) )
+        )
+      }
   }
 
 }

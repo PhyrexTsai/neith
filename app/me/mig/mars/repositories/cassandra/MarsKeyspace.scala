@@ -2,7 +2,7 @@ package me.mig.mars.repositories.cassandra
 
 import java.lang.{Long => JavaLong, Short => JavaShort}
 import java.sql.Timestamp
-import java.util.{UUID, List => JavaList}
+import java.util.{List => JavaList}
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
@@ -10,8 +10,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.alpakka.cassandra.scaladsl.{CassandraSink, CassandraSource}
 import akka.stream.scaladsl.{Sink, Source}
 import com.datastax.driver.core._
-import me.mig.mars.models.JobModel.{Job, NextJob}
-import me.mig.mars.services.JobScheduleService.CreateJob
+import me.mig.mars.models.JobModel.{CreateJob, Job, NextJob}
 import play.api.inject.ApplicationLifecycle
 import play.api.{Configuration, Logger}
 
@@ -27,13 +26,14 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
 
   private val config = configuration.underlying.getConfig("cassandra")
   private final val CREATE_KEYSPACE = "CREATE KEYSPACE IF NOT EXISTS mars WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': '1' }"
-  private final val CREATE_JOB_TABLE = "CREATE TABLE IF NOT EXISTS mars.jobs (ID uuid PRIMARY KEY, LABEL list<smallint>, COUNTRY list<int>, STARTTIME timestamp, ENDTIME timestamp, INTERVAL bigint, NOTIFICATIONTYPE ascii, MESSAGE text, CALLTOACTION map<text, text>)"
+  private final val CREATE_JOB_TABLE = "CREATE TABLE IF NOT EXISTS mars.jobs (ID text PRIMARY KEY, LABEL list<smallint>, COUNTRY list<int>, STARTTIME timestamp, ENDTIME timestamp, INTERVAL bigint, NOTIFICATIONTYPE ascii, MESSAGE text, CALLTOACTION map<text, text>)"
 
   implicit private val materializer = ActorMaterializer()
   implicit private val session = Cluster.builder.addContactPoints(config.getStringList("hosts").toList: _*).withPort(config.getInt("port")).build.connect()
-  private val jobsTable = new JobsTable()
 
   init
+
+  private val jobsTable = new JobsTable()
 
   // Try to create keyspace and tables if not exist.
   def init() = {
@@ -44,11 +44,11 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
       throw new InterruptedException("Creating job table in the cassandra encounters error.")
   }
 
-  def createJob(job: CreateJob): Future[UUID] = jobsTable.createJob(job)
+  def createJob(job: CreateJob): Future[String] = jobsTable.createJob(job)
 
-  def getJobs(jobId: Option[UUID] = None): Future[List[Job]] = jobsTable.getJobs(jobId)
+  def getJobs(jobId: Option[String] = None): Future[List[Job]] = jobsTable.getJobs(jobId)
 
-  def setNextJob(jobId: UUID): Future[UUID] = jobsTable.setNextJob(jobId)
+  def setNextJob(jobId: String): Future[String] = jobsTable.setNextJob(jobId)
 
   applicationLifecycle.addStopHook(() => {
     Future.successful(session.close())
@@ -62,9 +62,10 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
     private final val SELECT_JOBS = "SELECT * from mars.jobs"
     private final val SELECT_STARTTIME_INTERVAL = "SELECT startTime, interval from mars.jobs where id = "
     private final val SET_NEXT_JOB = "UPDATE mars.jobs SET startTime = ? where id = ?"
+    private val preparedSetNextJobStmt = session.prepare(SET_NEXT_JOB)
 
     private val rowMapping = (row: Row) =>
-      Job(row.getUUID("id"),
+      Job(row.getString("id"),
         row.getList[JavaShort]("label", classOf[JavaShort]).map(l => l: Short).toList,
         row.getList[Integer]("country", classOf[Integer]).map(c => c: Int).toList,
         new Timestamp(row.getTimestamp("startTime").getTime),
@@ -74,7 +75,7 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
         row.getString("message"),
         row.getMap[String, String]("callToAction", classOf[String], classOf[String]).toMap)
 
-    private[cassandra] def createJob(job: CreateJob): Future[UUID] = {
+    private[cassandra] def createJob(job: CreateJob): Future[String] = {
       val preparedStmt = session.prepare(INSERT_JOB)
       val stmtBinder = (bindJob: Job, preparedStmt: PreparedStatement) =>
         preparedStmt.bind(
@@ -89,12 +90,12 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
           mapAsJavaMap(bindJob.callToAction)
         )
       val sink = CassandraSink[Job](parallelism = 2, preparedStmt, stmtBinder)
-      val newJob = Job(UUID.randomUUID(), job.label, job.country, new Timestamp(job.startTime), job.endTime match {
+      val newJob = Job(job.id, job.label, job.country, new Timestamp(job.startTime), job.endTime match {
         case Some(x) => Some(new Timestamp(job.endTime.get))
         case None => None
       }, job.interval, job.notificationType, job.message, job.callToAction)
 
-      Source.single(newJob).runWith(sink).transform[UUID](
+      Source.single(newJob).runWith(sink).transform[String](
         (Done) => newJob.id,
         (ex) => {
           Logger.error("CreateJob error: " + ex.getMessage)
@@ -103,13 +104,12 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
       )
     }
 
-    private[cassandra] def setNextJob(jobId: UUID): Future[UUID] = {
-      val preparedStmt = session.prepare(SET_NEXT_JOB)
+    private[cassandra] def setNextJob(jobId: String): Future[String] = {
       val stmtBinder = (nextJob: NextJob, preparedStmt: PreparedStatement) =>
         preparedStmt.bind(nextJob.startTime, nextJob.id)
-      val sink = CassandraSink[NextJob](parallelism = 1, preparedStmt, stmtBinder)
+      val sink = CassandraSink[NextJob](parallelism = 1, preparedSetNextJobStmt, stmtBinder)
 
-      CassandraSource(new SimpleStatement(SELECT_STARTTIME_INTERVAL + jobId))
+      CassandraSource(new SimpleStatement(SELECT_STARTTIME_INTERVAL + s"'${jobId}'"))
         .map(row => {
           val nextStartTime = new Timestamp(row.getTimestamp(0).getTime + row.getLong(1))
           Logger.info("To set job(" + jobId + ") with new startTime: " + nextStartTime)
@@ -121,10 +121,10 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
         )
     }
 
-    private[cassandra] def getJobs(jobId: Option[UUID] = None): Future[List[Job]] = {
+    private[cassandra] def getJobs(jobId: Option[String] = None): Future[List[Job]] = {
       val queryStmt = jobId match {
         case Some(id) =>
-          new SimpleStatement(SELECT_JOBS + " WHERE id=" + jobId.getOrElse(null))
+          new SimpleStatement(SELECT_JOBS + s" WHERE id='${jobId.getOrElse(null)}'")
         case None =>
           new SimpleStatement(SELECT_JOBS)
       }
@@ -133,6 +133,10 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
         ex => ex
       )
     }
+
+//    private[cassandra] def updateJobs(job: UpdateJob): Future[Done] = {
+
+//    }
 
   }
 }

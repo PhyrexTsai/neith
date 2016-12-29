@@ -108,6 +108,7 @@ lazy val GTest = config("gatling") extend (Test)
 lazy val mars = (project in file(".")).
   enablePlugins(PlayScala).
   enablePlugins(GatlingPlugin).
+  enablePlugins(JavaServerAppPackaging).
   configs(GTest).
   settings(inConfig(GTest)(Defaults.testSettings): _*).
   settings(
