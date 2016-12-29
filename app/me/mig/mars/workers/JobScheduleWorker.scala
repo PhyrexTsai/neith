@@ -65,7 +65,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
           }
         }
         .flatMapConcat(tokens => Source(tokens).map { token =>
-            Logger.info("caseToken: " + token)
+            Logger.info("job with tokens: " + token)
             // Publishing to job queue(Kafka) ready for consuming.
             pushNotificationKafkaProducer ! token
           }

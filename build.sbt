@@ -1,4 +1,3 @@
-import sbt.Attributed
 import sbt.Keys._
 import sbtassembly.AssemblyPlugin.autoImport._
 import sbtassembly.MergeStrategy
@@ -115,35 +114,35 @@ lazy val mars = (project in file(".")).
     scalaSource in GTest := baseDirectory.value / "/test",
     dependencyOverrides += "org.asynchttpclient" % "async-http-client" % "2.0.10" % Test
   ).
-  settings(commonSettings: _*).
-  settings(
-    mainClass in assembly := Some("play.core.server.ProdServerStart"),
-    fullClasspath in assembly += Attributed.blank(PlayKeys.playPackageAssets.value),
-    Defaults.coreDefaultSettings ++ sbtassembly.AssemblyPlugin.assemblySettings ++
-      addArtifact(Artifact("mars", "assembly"), sbtassembly.AssemblyKeys.assembly) ++
-      Seq(
-        name := "mars",
-        sbtassembly.AssemblyKeys.assemblyJarName <<= (name, scalaVersion, version in ThisBuild) map ((x,y,z) => "%s_%s-%s-assembly.jar" format(x,y,z))
-      ),
-    // Use the customMergeStrategy in your settings
-    assemblyMergeStrategy in assembly := customMergeStrategy,
-
-    assemblyMergeStrategy in assembly := {
-      case PathList("javax", "servlet", xs @ _*)         => MergeStrategy.first
-      case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.first
-      case "application.conf"                            => MergeStrategy.concat
-      case "unwanted.txt"                                => MergeStrategy.discard
-      case "javax/annotation/Syntax.class" => MergeStrategy.first
-      case "javax/annotation/Syntax.java" => MergeStrategy.first
-      case "javax/annotation/meta/When.class" => MergeStrategy.first
-      case x =>
-        val oldStrategy = (assemblyMergeStrategy in assembly).value
-        oldStrategy(x)
-    },
-
-    // Avoid sub-projects generating assembly jars
-    aggregate in assembly := false,
-
-    // Exclude tests in assembly
-    test in assembly := {}
-  )
+  settings(commonSettings: _*)
+//  settings(
+//    mainClass in assembly := Some("play.core.server.ProdServerStart"),
+//    fullClasspath in assembly += Attributed.blank(PlayKeys.playPackageAssets.value),
+//    Defaults.coreDefaultSettings ++ sbtassembly.AssemblyPlugin.assemblySettings ++
+//      addArtifact(Artifact("mars", "assembly"), sbtassembly.AssemblyKeys.assembly) ++
+//      Seq(
+//        name := "mars",
+//        sbtassembly.AssemblyKeys.assemblyJarName <<= (name, scalaVersion, version in ThisBuild) map ((x,y,z) => "%s_%s-%s-assembly.jar" format(x,y,z))
+//      ),
+//    // Use the customMergeStrategy in your settings
+//    assemblyMergeStrategy in assembly := customMergeStrategy,
+//
+//    assemblyMergeStrategy in assembly := {
+//      case PathList("javax", "servlet", xs @ _*)         => MergeStrategy.first
+//      case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.first
+//      case "application.conf"                            => MergeStrategy.concat
+//      case "unwanted.txt"                                => MergeStrategy.discard
+//      case "javax/annotation/Syntax.class" => MergeStrategy.first
+//      case "javax/annotation/Syntax.java" => MergeStrategy.first
+//      case "javax/annotation/meta/When.class" => MergeStrategy.first
+//      case x =>
+//        val oldStrategy = (assemblyMergeStrategy in assembly).value
+//        oldStrategy(x)
+//    },
+//
+//    // Avoid sub-projects generating assembly jars
+//    aggregate in assembly := false,
+//
+//    // Exclude tests in assembly
+//    test in assembly := {}
+//  )

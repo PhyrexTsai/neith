@@ -15,7 +15,7 @@ import play.api.{Configuration, Logger}
 /**
   * Created by jameshsiao on 8/29/16.
   */
-class PushNotificationKafkaProducer @Inject()(configuration: Configuration, system: ActorSystem, implicit val materializer: Materializer, consumer: PushNotificationKafkaConsumer) extends Actor {
+class PushNotificationKafkaProducer @Inject()(configuration: Configuration, system: ActorSystem, implicit val materializer: Materializer) extends Actor {
 
   private val producerSettings = ProducerSettings(system, new ByteArraySerializer, new StringSerializer)
     .withBootstrapServers(configuration.getString("kafka.host").get + ":" + configuration.getInt("kafka.port").get)
@@ -26,14 +26,7 @@ class PushNotificationKafkaProducer @Inject()(configuration: Configuration, syst
         .map(job => {
           new ProducerRecord[Array[Byte], String](job.jobId.get, job.toString)
         })
-//        .map { record =>
-//          Logger.debug("record: " + record)
-//          Logger.debug("record will publish to the topic: " + record.topic())
-//          consumer.launch(record.topic())
-//          record
-//        }
         .runWith(Producer.plainSink(producerSettings))
-//        .map(Done => consumer.launch(token.jobId.get))
     case x => Logger.warn("Unsupported event: " + x)
   }
 }
