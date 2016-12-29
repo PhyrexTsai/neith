@@ -10,8 +10,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.alpakka.cassandra.scaladsl.{CassandraSink, CassandraSource}
 import akka.stream.scaladsl.{Sink, Source}
 import com.datastax.driver.core._
-import me.mig.mars.models.JobModel.{Job, NextJob}
-import me.mig.mars.services.JobScheduleService.CreateJob
+import me.mig.mars.models.JobModel.{CreateJob, Job, NextJob}
 import play.api.inject.ApplicationLifecycle
 import play.api.{Configuration, Logger}
 
@@ -31,9 +30,10 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
 
   implicit private val materializer = ActorMaterializer()
   implicit private val session = Cluster.builder.addContactPoints(config.getStringList("hosts").toList: _*).withPort(config.getInt("port")).build.connect()
-  private val jobsTable = new JobsTable()
 
   init
+
+  private val jobsTable = new JobsTable()
 
   // Try to create keyspace and tables if not exist.
   def init() = {
@@ -62,6 +62,7 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
     private final val SELECT_JOBS = "SELECT * from mars.jobs"
     private final val SELECT_STARTTIME_INTERVAL = "SELECT startTime, interval from mars.jobs where id = "
     private final val SET_NEXT_JOB = "UPDATE mars.jobs SET startTime = ? where id = ?"
+    private val preparedSetNextJobStmt = session.prepare(SET_NEXT_JOB)
 
     private val rowMapping = (row: Row) =>
       Job(row.getString("id"),
@@ -104,12 +105,11 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
     }
 
     private[cassandra] def setNextJob(jobId: String): Future[String] = {
-      val preparedStmt = session.prepare(SET_NEXT_JOB)
       val stmtBinder = (nextJob: NextJob, preparedStmt: PreparedStatement) =>
         preparedStmt.bind(nextJob.startTime, nextJob.id)
-      val sink = CassandraSink[NextJob](parallelism = 1, preparedStmt, stmtBinder)
+      val sink = CassandraSink[NextJob](parallelism = 1, preparedSetNextJobStmt, stmtBinder)
 
-      CassandraSource(new SimpleStatement(SELECT_STARTTIME_INTERVAL + jobId))
+      CassandraSource(new SimpleStatement(SELECT_STARTTIME_INTERVAL + s"'${jobId}'"))
         .map(row => {
           val nextStartTime = new Timestamp(row.getTimestamp(0).getTime + row.getLong(1))
           Logger.info("To set job(" + jobId + ") with new startTime: " + nextStartTime)
@@ -124,7 +124,7 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
     private[cassandra] def getJobs(jobId: Option[String] = None): Future[List[Job]] = {
       val queryStmt = jobId match {
         case Some(id) =>
-          new SimpleStatement(SELECT_JOBS + " WHERE id=" + jobId.getOrElse(null))
+          new SimpleStatement(SELECT_JOBS + s" WHERE id='${jobId.getOrElse(null)}'")
         case None =>
           new SimpleStatement(SELECT_JOBS)
       }
@@ -133,6 +133,10 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
         ex => ex
       )
     }
+
+//    private[cassandra] def updateJobs(job: UpdateJob): Future[Done] = {
+
+//    }
 
   }
 }

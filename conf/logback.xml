@@ -54,6 +54,10 @@
   <logger name="com.avaje.ebeaninternal.server.lib.BackgroundThread" level="OFF" />
   <logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF" />
 
+  <!-- Turn down Kafka noise -->
+  <logger name="org.apache.kafka" level="WARN" />
+  <logger name="javax.management.mbeanserver" level="WARN" />
+
   <root level="${log.root.level:-DEBUG}">
     <appender-ref ref="ASYNC_FILE" />
     <appender-ref ref="ASYNC_STDOUT" />

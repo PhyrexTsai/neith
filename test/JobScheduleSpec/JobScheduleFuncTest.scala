@@ -60,6 +60,9 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       contentAsString(result) must include ("Creating a scheduled job encounters error:")
     }
 
+  }
+
+  "Operations in fusion database" should {
     "Search users with labels" in {
       val app = FakeApplication(additionalConfiguration = Map(
         "slick.dbs.default.driver" -> "slick.driver.H2Driver$",

@@ -1,17 +1,16 @@
 package me.mig.mars.services
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Inject, Named, Singleton}
 
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import me.mig.mars.BaseResponse
-import me.mig.mars.models.JobModel.{DispatchJob, Job}
+import me.mig.mars.models.JobModel.{CreateJob, CreateJobAck, DispatchJob, GetJobsAck}
 import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.repositories.mysql.FusionDatabase
-import me.mig.mars.workers.PushNotificationProcessor
+import me.mig.mars.workers.push.PushNotificationKafkaConsumer
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.Json
+import play.api.libs.concurrent.InjectedActorSupport
 import play.api.{Configuration, Logger}
 
 import scala.concurrent.Future
@@ -21,8 +20,7 @@ import scala.concurrent.duration._
   * Created by jameshsiao on 12/13/16.
   */
 @Singleton
-class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: ApplicationLifecycle, configuration: Configuration, implicit val fusionDB: FusionDatabase, implicit val keyspace: MarsKeyspace, implicit val materializer: Materializer) {
-  import JobScheduleService._
+class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycle: ApplicationLifecycle, configuration: Configuration, implicit val fusionDB: FusionDatabase, implicit val keyspace: MarsKeyspace, implicit val materializer: Materializer, @Named("JobScheduleWorker") jobScheduleWorker: ActorRef, pushNotificationKafkaConsumer: PushNotificationKafkaConsumer) extends InjectedActorSupport {
   import system.dispatcher
 
   // Loading stored jobs and scheduling to dispatch...
@@ -32,7 +30,9 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
       Logger.info("Loading " + jobsAck.data.size + " jobs")
       jobsAck.data.map(
         job => {
-          Logger.debug("job loaded: " + job)
+          Logger.debug("job loaded: " + job.id)
+          // Initializing Kafa consumers
+          pushNotificationKafkaConsumer.launch(job.id)
           val now = System.currentTimeMillis()
           var delay = job.startTime.getTime - now
           if (delay < 0) {
@@ -52,7 +52,7 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
     val cancellable = system.scheduler.schedule(
       FiniteDuration(delay, MILLISECONDS),
       FiniteDuration(interval, MILLISECONDS),
-      system.actorOf(PushNotificationProcessor.props(configuration.underlying)),
+      jobScheduleWorker,
       DispatchJob(jobId)
     )
     addLifeCycleStopHook(cancellable)
@@ -74,20 +74,15 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
         throw new IllegalArgumentException("StartTime is before now.")
 
       // Store the job into cassandra
-      keyspace.createJob(job).recover {
-        case x: Throwable =>
-          Logger.error("Creating job into cassandra encounters error: " + x.getMessage)
-          None
-      }.map {
-        case jobId: String =>
+      keyspace.createJob(job).transform[CreateJobAck](
+        jobId => {
           Logger.info("Job created: " + jobId)
           val delay = job.startTime - System.currentTimeMillis()
           scheduleJob(jobId, delay, job.interval)
           CreateJobAck(true)
-        case _ =>
-          Logger.info("createJob in cassandra failed")
-          CreateJobAck(false)
-      }
+        },
+        ex => new InterruptedException("Creating job into cassandra encounters error: " + ex.getMessage)
+      )
     }
 
   }
@@ -110,20 +105,4 @@ class JobScheduleService @Inject()(system: ActorSystem, appLifecycle: Applicatio
     })
   }
 
-}
-
-object JobScheduleService {
-  /** Json requests/responses **/
-  // Requests
-  case class CreateJob(id: String, label: List[Short], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Long = 60000, notificationType: String, message: String, callToAction: Map[String, String])
-  // Responses
-  case class CreateJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
-  case class GetJobsAck(data: List[Job], override val error: Option[String] = None) extends BaseResponse
-
-  // Json Reads
-  implicit val CreateJobReads = Json.reads[CreateJob]
-  // Json Writes
-  implicit val CreateJobAckWrites = Json.writes[CreateJobAck]
-  implicit val JobsWrites = Json.writes[Job]
-  implicit val GetJobsAckWrites = Json.writes[GetJobsAck]
 }

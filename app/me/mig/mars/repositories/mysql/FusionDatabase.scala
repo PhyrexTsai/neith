@@ -5,6 +5,7 @@ import javax.inject.{Inject, Singleton}
 
 import me.mig.mars.models.NotificationModel.{GcmRegToken, IosDeviceToken, NotificationTemplate}
 import me.mig.mars.models.UserModel.{User, UserId, UserLabel}
+import play.api.Logger
 import play.api.db.slick.DatabaseConfigProvider
 import play.db.NamedDatabase
 import slick.driver.JdbcProfile
@@ -141,6 +142,8 @@ class FusionDatabase @Inject()(@NamedDatabase("fusion") dbConfigProvider: Databa
                                               .joinLeft(users).on(_._2.map(_.username) === _.username)
                                               .filter(_._2.map(_.countryId) inSet countries)
     } yield (label.userId, label.labelType, userId.map(_.username), userInfo.map(_.countryId))
+
+    Logger.debug("MySQL query: " + labels + ", countries: " + countries)
 
     val tokens = for {
       ((user, gcmtoken), iostoken) <- selectedUsers.joinLeft(gcmRegTokens).on(_._1 === _.userId)
