@@ -11,7 +11,7 @@ import com.amazonaws.services.sns.AmazonSNSClient
 import com.amazonaws.services.sns.model._
 import me.mig.mars.models.JobModel.PushJob
 import org.apache.commons.codec.binary.Hex
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.Json
 import play.api.{Configuration, Logger}
 
 /**
@@ -157,21 +157,21 @@ object PushNotificationWorker {
 
   def toGcmMessage(message: String): String = {
     Json.obj(
-      "GCM" -> JsString(
-        {"data" -> Json.obj(
+      "GCM" -> Json.obj(
+        "data" -> Json.obj(
           "message" -> Json.toJson(message)
-        )}.toString()
-      )
+        )
+      ).toString()
     ).toString()
   }
 
   def toApnsMessage(message: String): String = {
     Json.obj(
-      "APNS" -> JsString(
-        {"aps" -> Json.obj(
+      "APNS" -> Json.obj(
+        "aps" -> Json.obj(
           "alert" -> Json.toJson(message)
-        )}.toString()
-      )
+        )
+      ).toString()
     ).toString()
   }
 }
