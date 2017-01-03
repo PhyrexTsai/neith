@@ -7,9 +7,10 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import me.mig.mars.models.JobModel.JobToken
+import me.mig.mars.models.JobModel.PushJob
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringSerializer}
+import play.api.libs.json.Json
 import play.api.{Configuration, Logger}
 
 /**
@@ -21,11 +22,9 @@ class PushNotificationKafkaProducer @Inject()(configuration: Configuration, syst
     .withBootstrapServers(configuration.getString("kafka.host").get + ":" + configuration.getInt("kafka.port").get)
 
   override def receive: Receive = {
-    case token: JobToken =>
+    case token: PushJob =>
       Source.single(token)
-        .map(job => {
-          new ProducerRecord[Array[Byte], String](job.jobId.get, job.toString)
-        })
+        .map( job => new ProducerRecord[Array[Byte], String](job.jobId, Json.toJson[PushJob](job).toString) )
         .runWith(Producer.plainSink(producerSettings))
     case x => Logger.warn("Unsupported event: " + x)
   }
