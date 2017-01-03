@@ -2,7 +2,7 @@ import akka.routing.{BalancingPool, SmallestMailboxPool}
 import com.google.inject.AbstractModule
 import me.mig.mars.services.{EmailService, JobScheduleService, PushNotificationService, TemplateBackgroundService}
 import me.mig.mars.workers.JobScheduleWorker
-import me.mig.mars.workers.push.PushNotificationKafkaProducer
+import me.mig.mars.workers.push.{PushNotificationKafkaProducer, PushNotificationWorker}
 import play.api.libs.concurrent.AkkaGuiceSupport
 
 /**
@@ -20,6 +20,7 @@ class Module extends AbstractModule with AkkaGuiceSupport {
   override def configure() = {
     bindActor[JobScheduleWorker]("JobScheduleWorker", p => new BalancingPool(10).props(p))
     bindActor[PushNotificationKafkaProducer]("PushNotificationKafkaProducer", p => new SmallestMailboxPool(10).props(p))
+    bindActor[PushNotificationWorker]("PushNotificationWorker")
     // Ask Guice to create an instance of TemplateBackgroundService when the
     // application starts.
     bind(classOf[TemplateBackgroundService]).asEagerSingleton()

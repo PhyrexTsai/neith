@@ -1,13 +1,11 @@
 import sbt.Keys._
-import sbtassembly.AssemblyPlugin.autoImport._
-import sbtassembly.MergeStrategy
 import sbtrelease.ReleaseStateTransformations._
 
 name := """mars"""
 
 scalaVersion in Global := "2.11.8"
 
-val akkaVersion = "2.4.14"
+val akkaVersion = "2.4.16"
 
 resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases/"
 
@@ -35,12 +33,14 @@ libraryDependencies ++= Seq(
   // Logging
   "net.logstash.logback" % "logstash-logback-encoder" % "4.7",
   // Nexus dependencies
-  "me.mig.matter-stream" %% "notification" % "1.0.14",
-  "me.mig.matter-stream" %% "reactiveio" % "1.0.14",
+  "me.mig.matter-stream" %% "notification" % "1.0.19",
+  "me.mig.matter-stream" %% "reactiveio" % "1.0.19",
   // Gatling
   "io.gatling.highcharts" % "gatling-charts-highcharts" % "2.2.2" % "test",
   "io.gatling"            % "gatling-test-framework"    % "2.2.2" % "test"
 )
+
+dependencyOverrides += "com.trueaccord.lenses" %% "lenses" % "0.4.6"
 
 // Exclude commons-logging since Play has jcl-over-slf4j, which re-implements the logging API.
 libraryDependencies ~= { _ map {
@@ -88,18 +88,14 @@ releaseProcess := Seq[ReleaseStep](
 lazy val jira = SettingKey[String]("jira", "The JIRA issue parameter to be propagated to git commit message.")
 
 lazy val commonSettings = Seq(
+  rpmVendor := "migme",
+  packageDescription in Rpm := "Notificatoin service of Migme.",
+
   organization := "me.mig.mars",
   version := (version in ThisBuild).value,
   scalaVersion := "2.11.8",
   jira := sys.props.get("JIRA").getOrElse("QA-XXX")
 )
-// Use defaultMergeStrategy with a case for aop.xml
-// I like this better than the inline version mentioned in assembly's README
-lazy val customMergeStrategy: String => MergeStrategy = {
-//  case PathList("META-INF", "aop.xml") => CustomMerge.aopMerge
-  case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.discard
-  case s => MergeStrategy.defaultMergeStrategy(s)
-}
 
 // Gatling testing
 lazy val GTest = config("gatling") extend (Test)
@@ -115,34 +111,3 @@ lazy val mars = (project in file(".")).
     dependencyOverrides += "org.asynchttpclient" % "async-http-client" % "2.0.10" % Test
   ).
   settings(commonSettings: _*)
-//  settings(
-//    mainClass in assembly := Some("play.core.server.ProdServerStart"),
-//    fullClasspath in assembly += Attributed.blank(PlayKeys.playPackageAssets.value),
-//    Defaults.coreDefaultSettings ++ sbtassembly.AssemblyPlugin.assemblySettings ++
-//      addArtifact(Artifact("mars", "assembly"), sbtassembly.AssemblyKeys.assembly) ++
-//      Seq(
-//        name := "mars",
-//        sbtassembly.AssemblyKeys.assemblyJarName <<= (name, scalaVersion, version in ThisBuild) map ((x,y,z) => "%s_%s-%s-assembly.jar" format(x,y,z))
-//      ),
-//    // Use the customMergeStrategy in your settings
-//    assemblyMergeStrategy in assembly := customMergeStrategy,
-//
-//    assemblyMergeStrategy in assembly := {
-//      case PathList("javax", "servlet", xs @ _*)         => MergeStrategy.first
-//      case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.first
-//      case "application.conf"                            => MergeStrategy.concat
-//      case "unwanted.txt"                                => MergeStrategy.discard
-//      case "javax/annotation/Syntax.class" => MergeStrategy.first
-//      case "javax/annotation/Syntax.java" => MergeStrategy.first
-//      case "javax/annotation/meta/When.class" => MergeStrategy.first
-//      case x =>
-//        val oldStrategy = (assemblyMergeStrategy in assembly).value
-//        oldStrategy(x)
-//    },
-//
-//    // Avoid sub-projects generating assembly jars
-//    aggregate in assembly := false,
-//
-//    // Exclude tests in assembly
-//    test in assembly := {}
-//  )

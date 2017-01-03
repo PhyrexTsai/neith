@@ -21,16 +21,10 @@ object JobModel {
                  callToAction: Map[String, String],
                  disabled: Option[Boolean] = None)
   case class NextJob(id: String, startTime: Timestamp)
-  case class JobToken(userId: Int, username: Option[String], gcmToken: Option[String], iosToken: Option[Array[Byte]]) {
-    var jobId: Option[String] = None
-    def withJobId(jobId: String): JobToken = {
-      this.jobId = Some(jobId)
-      this
-    }
-  }
 
   /** Event models **/
   case class DispatchJob(jobId: String)
+  case class PushJob(jobId: String, userId: Int, message: String, username: Option[String], gcmToken: Option[String], iosToken: Option[Array[Byte]])
 
   /** Json models **/
   // Requests
@@ -41,8 +35,10 @@ object JobModel {
 
   // Json Reads
   implicit val CreateJobReads = Json.reads[CreateJob]
+  implicit val PushJobReads = Json.reads[PushJob]
   // Json Writes
   implicit val CreateJobAckWrites = Json.writes[CreateJobAck]
   implicit val JobsWrites = Json.writes[Job]
   implicit val GetJobsAckWrites = Json.writes[GetJobsAck]
+  implicit val PushJobWrites = Json.writes[PushJob]
 }

@@ -18,6 +18,11 @@ import play.api.mvc.{Action, Controller}
 class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, system: ActorSystem, implicit val materializer: Materializer) extends Controller {
   import system.dispatcher
 
+  /**
+    * Read request from json body in CreateJson, and return the success in Boolean.
+    *
+    * @return       Success in TRUE or FALSE with error message if the job hasn't created.
+    */
   def createJob = Action.async(ErrorHandler.validateJson[CreateJob]) { request =>
       Source.single(request.body)
         .via(jobScheduleService.createJob)
@@ -30,6 +35,14 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
         }
   }
 
+  /**
+    * Read GET request with query string,
+    *
+    * @param id       Optional, job id in String, if not set, will get all stored jobs.
+    * @param page     Optional, page number of jobs to fetch according the pageSize.
+    * @param pageSize Optional, return jobs amount per page, default is ??.
+    * @return         List of jobs in data field or error message in error field (Optional) if encounters errors.
+    */
   def getJobs(id: String, page: Option[Int], pageSize: Option[Int]) = Action.async { request =>
     Source.single(id)
       .via(jobScheduleService.getJobs)
