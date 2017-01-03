@@ -3,7 +3,7 @@ import sbtrelease.ReleaseStateTransformations._
 
 name := """mars"""
 
-scalaVersion in Global := "2.11.8"
+//scalaVersion in Global := "2.11.8"
 
 val akkaVersion = "2.4.16"
 
@@ -103,7 +103,7 @@ lazy val GTest = config("gatling") extend (Test)
 lazy val mars = (project in file(".")).
   enablePlugins(PlayScala).
   enablePlugins(GatlingPlugin).
-  enablePlugins(JavaServerAppPackaging).
+  enablePlugins(JavaServerAppPackaging, RpmPlugin).
   configs(GTest).
   settings(inConfig(GTest)(Defaults.testSettings): _*).
   settings(
