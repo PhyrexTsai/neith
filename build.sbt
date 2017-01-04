@@ -89,6 +89,7 @@ lazy val jira = SettingKey[String]("jira", "The JIRA issue parameter to be propa
 
 lazy val commonSettings = Seq(
   rpmVendor := "migme",
+  version in Rpm := "0.0.6",
   packageDescription in Rpm := "Notificatoin service of Migme.",
 
   organization := "me.mig.mars",
@@ -103,7 +104,7 @@ lazy val GTest = config("gatling") extend (Test)
 lazy val mars = (project in file(".")).
   enablePlugins(PlayScala).
   enablePlugins(GatlingPlugin).
-  enablePlugins(JavaServerAppPackaging, RpmPlugin).
+  enablePlugins(JavaServerAppPackaging).
   configs(GTest).
   settings(inConfig(GTest)(Defaults.testSettings): _*).
   settings(
