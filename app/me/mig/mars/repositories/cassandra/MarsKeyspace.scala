@@ -26,7 +26,11 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
 
   private val config = configuration.underlying.getConfig("cassandra")
   private final val CREATE_KEYSPACE = "CREATE KEYSPACE IF NOT EXISTS mars WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': '1' }"
-  private final val CREATE_JOB_TABLE = "CREATE TABLE IF NOT EXISTS mars.jobs (ID text PRIMARY KEY, LABEL list<smallint>, COUNTRY list<int>, STARTTIME timestamp, ENDTIME timestamp, INTERVAL bigint, NOTIFICATIONTYPE ascii, MESSAGE text, CALLTOACTION map<text, text>)"
+  private final val CREATE_JOB_TABLE = "CREATE TABLE IF NOT EXISTS mars.jobs (ID text PRIMARY KEY, CREATOR text, LABEL list<smallint>, COUNTRY list<int>, STARTTIME timestamp, ENDTIME timestamp, INTERVAL bigint, NOTIFICATIONTYPE ascii, MESSAGE text, CALLTOACTION map<text, text>, CREATEDTIME timestamp, DISABLED boolean)"
+  // Currently might not be used
+  private final val CREATE_NOTIFICATION_TYPE_TABLE = "CREATE TABLE IF NOT EXISTS mars.notificationtype ( name ascii, PRIMARY KEY (name) ) WITH caching = {'keys':'NONE','rows_per_partition':'NONE'}"
+  private final val CREATE_NOTIFICATION_DESTINATION_TABLE = "CREATE TABLE IF NOT EXISTS mars.notificationdestination ( name ascii, PRIMARY KEY (name) ) WITH caching = {'keys':'NONE','rows_per_partition':'NONE'}"
+  private final val CREATE_NOTIFICATION_TEMPLATE_TABLE = "CREATE TABLE IF NOT EXISTS mars.notificationtemplate ( type ascii, destination ascii, language ascii, variety int, mimetype ascii, subject text, body text, createdtime timestamp, updatedtime timestamp, PRIMARY KEY (type, destination, language, variety) ) WITH caching = {'keys':'NONE','rows_per_partition':'NONE'}"
 
   implicit private val materializer = ActorMaterializer()
   implicit private val session = Cluster.builder.addContactPoints(config.getStringList("hosts").toList: _*).withPort(config.getInt("port")).build.connect()
@@ -42,13 +46,18 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
 
     if (!session.execute(CREATE_JOB_TABLE).isExhausted)
       throw new InterruptedException("Creating job table in the cassandra encounters error.")
+
+    if (!session.execute(CREATE_NOTIFICATION_TYPE_TABLE).isExhausted)
+      throw new InterruptedException("Creating notification type table in the cassandra ecounters error.")
   }
 
   def createJob(job: CreateJob): Future[String] = jobsTable.createJob(job)
 
   def getJobs(jobId: Option[String] = None): Future[List[Job]] = jobsTable.getJobs(jobId)
 
-  def setNextJob(jobId: String): Future[String] = jobsTable.setNextJob(jobId)
+  def setNextJob(jobId: String, delay: Long): Future[String] = jobsTable.setNextJob(jobId, delay)
+
+  def disableJob(jobId: String): Future[Boolean] = jobsTable.disableJob(jobId)
 
   applicationLifecycle.addStopHook(() => {
     Future.successful(session.close())
@@ -58,42 +67,50 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
   private[cassandra] class JobsTable() {
     import materializer.executionContext
 
-    private final val INSERT_JOB = "INSERT INTO mars.jobs (id, label, country, startTime, endTime, interval, notificationType, message, callToAction) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    private final val INSERT_JOB = "INSERT INTO mars.jobs (id, creator, label, country, startTime, endTime, interval, notificationType, message, callToAction, createdTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     private final val SELECT_JOBS = "SELECT * from mars.jobs"
     private final val SELECT_STARTTIME_INTERVAL = "SELECT startTime, interval from mars.jobs where id = "
     private final val SET_NEXT_JOB = "UPDATE mars.jobs SET startTime = ? where id = ?"
+    private final val DISABLE_JOB = "UPDATE mars.jobs SET disabled = true where id = ?"
     private val preparedSetNextJobStmt = session.prepare(SET_NEXT_JOB)
 
     private val rowMapping = (row: Row) =>
       Job(row.getString("id"),
+        row.getString("creator"),
         row.getList[JavaShort]("label", classOf[JavaShort]).map(l => l: Short).toList,
         row.getList[Integer]("country", classOf[Integer]).map(c => c: Int).toList,
         new Timestamp(row.getTimestamp("startTime").getTime),
         if (row.getTimestamp("endTime") != null) Some(new Timestamp(row.getTimestamp("endTime").getTime)) else None,
-        row.get[Long]("interval", classOf[Long]),
+        if (row.get[Long]("interval", classOf[Long]) != null) Some(row.get[Long]("interval", classOf[Long])) else None,
         row.getString("notificationType"),
         row.getString("message"),
-        row.getMap[String, String]("callToAction", classOf[String], classOf[String]).toMap)
+        row.getMap[String, String]("callToAction", classOf[String], classOf[String]).toMap,
+        new Timestamp(row.getTimestamp("createdTime").getTime),
+        Some(row.getBool("disabled"))
+      )
 
     private[cassandra] def createJob(job: CreateJob): Future[String] = {
       val preparedStmt = session.prepare(INSERT_JOB)
       val stmtBinder = (bindJob: Job, preparedStmt: PreparedStatement) =>
         preparedStmt.bind(
           bindJob.id,
+          bindJob.creator,
           ListBuffer(bindJob.label: _*): JavaList[Short],   // Need specific conversion to Java types
           ListBuffer(bindJob.country: _*): JavaList[Int], // Need specific conversion to Java types
           bindJob.startTime,
           bindJob.endTime.getOrElse(null),
-          bindJob.interval: JavaLong, // Need specific conversion to Java types
+          if (bindJob.interval nonEmpty) bindJob.interval.get: JavaLong else null, // Need specific conversion to Java types
           bindJob.notificationType,
           bindJob.message,
-          mapAsJavaMap(bindJob.callToAction)
+          mapAsJavaMap(bindJob.callToAction),
+          bindJob.createdTime
         )
       val sink = CassandraSink[Job](parallelism = 2, preparedStmt, stmtBinder)
-      val newJob = Job(job.id, job.label, job.country, new Timestamp(job.startTime), job.endTime match {
+      val newJob = Job(job.id, job.creator,
+        job.label, job.country, new Timestamp(job.startTime), job.endTime match {
         case Some(x) => Some(new Timestamp(job.endTime.get))
         case None => None
-      }, job.interval, job.notificationType, job.message, job.callToAction)
+      }, job.interval, job.notificationType, job.message, job.callToAction, new Timestamp(System.currentTimeMillis()))
 
       Source.single(newJob).runWith(sink).transform[String](
         (Done) => newJob.id,
@@ -104,14 +121,14 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
       )
     }
 
-    private[cassandra] def setNextJob(jobId: String): Future[String] = {
+    private[cassandra] def setNextJob(jobId: String, delay: Long): Future[String] = {
       val stmtBinder = (nextJob: NextJob, preparedStmt: PreparedStatement) =>
         preparedStmt.bind(nextJob.startTime, nextJob.id)
       val sink = CassandraSink[NextJob](parallelism = 1, preparedSetNextJobStmt, stmtBinder)
 
       CassandraSource(new SimpleStatement(SELECT_STARTTIME_INTERVAL + s"'${jobId}'"))
         .map(row => {
-          val nextStartTime = new Timestamp(row.getTimestamp(0).getTime + row.getLong(1))
+          val nextStartTime = new Timestamp(row.getTimestamp(0).getTime + delay)
           Logger.info("To set job(" + jobId + ") with new startTime: " + nextStartTime)
           NextJob(jobId, nextStartTime)
         })
@@ -131,6 +148,21 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
       CassandraSource(queryStmt).runWith(Sink.seq).transform(
         _.map(rowMapping).toList,
         ex => ex
+      )
+    }
+
+    private[cassandra] def disableJob(jobId: String): Future[Boolean] = {
+      val preparedStmt = session.prepare(DISABLE_JOB)
+      val stmtBinder = (jobId: String, preparedStmt: PreparedStatement) =>
+        preparedStmt.bind(jobId)
+      val sink = CassandraSink(parallelism = 1, preparedStmt, stmtBinder)
+
+      Source.single(jobId).runWith(sink).transform(
+        Done => true,
+        ex => {
+          Logger.error("Disabling job error: " + ex.getMessage)
+          ex
+        }
       )
     }
 
