@@ -89,6 +89,7 @@ lazy val jira = SettingKey[String]("jira", "The JIRA issue parameter to be propa
 
 lazy val commonSettings = Seq(
   rpmVendor := "migme",
+  rpmLicense := "migme",
   version in Rpm := "0.0.6",
   packageDescription in Rpm := "Notificatoin service of Migme.",
 
