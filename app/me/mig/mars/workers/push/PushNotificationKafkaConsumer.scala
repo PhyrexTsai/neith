@@ -18,6 +18,8 @@ import play.api.{Configuration, Logger}
   * Created by jameshsiao on 8/29/16.
   */
 class PushNotificationKafkaConsumer @Inject()(configuration: Configuration, system: ActorSystem, implicit val materializer: Materializer, @Named("PushNotificationWorker") pushNotificationWorker: ActorRef) {
+  import system.dispatcher
+
   val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
     .withBootstrapServers(configuration.getString("kafka.host").get + ":" + configuration.getInt("kafka.port").get)
     .withGroupId("Push")
@@ -28,7 +30,7 @@ class PushNotificationKafkaConsumer @Inject()(configuration: Configuration, syst
       .map { msg =>
         val pushJob = Json.parse(msg.record.value()).as[PushJob]
         Logger.info("Consumer committable message: " + pushJob)
-        // TODO: Send push notification
+        // Sending push notification
         pushNotificationWorker ! pushJob
         msg.committableOffset
       }
@@ -38,6 +40,9 @@ class PushNotificationKafkaConsumer @Inject()(configuration: Configuration, syst
       }
       .mapAsync(3)(_.commitScaladsl())
       .runWith(Sink.ignore)
+      .recover {
+        case x => Logger.error("Cosuming data error: " + x)
+      }
   }
 
 }

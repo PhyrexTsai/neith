@@ -11,14 +11,16 @@ import play.api.libs.json.Json
 object JobModel {
   /** Table models **/
   case class Job(id: String,
+                 creator: String,
                  label: List[Short],
                  country: List[Int],
                  startTime: Timestamp,
                  endTime: Option[Timestamp],
-                 interval: Long,
+                 interval: Option[Long],
                  notificationType: String,
                  message: String,
                  callToAction: Map[String, String],
+                 createdTime: Timestamp,
                  disabled: Option[Boolean] = None)
   case class NextJob(id: String, startTime: Timestamp)
 
@@ -28,7 +30,7 @@ object JobModel {
 
   /** Json models **/
   // Requests
-  case class CreateJob(id: String, label: List[Short], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Long = 60000, notificationType: String, message: String, callToAction: Map[String, String])
+  case class CreateJob(id: String, creator: String, label: List[Short], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Option[Long], notificationType: String, message: String, callToAction: Map[String, String])
   // Responses
   case class CreateJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
   case class GetJobsAck(data: List[Job], override val error: Option[String] = None) extends BaseResponse

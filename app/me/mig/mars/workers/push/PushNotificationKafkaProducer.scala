@@ -17,15 +17,19 @@ import play.api.{Configuration, Logger}
   * Created by jameshsiao on 8/29/16.
   */
 class PushNotificationKafkaProducer @Inject()(configuration: Configuration, system: ActorSystem, implicit val materializer: Materializer) extends Actor {
+  import system.dispatcher
 
   private val producerSettings = ProducerSettings(system, new ByteArraySerializer, new StringSerializer)
     .withBootstrapServers(configuration.getString("kafka.host").get + ":" + configuration.getInt("kafka.port").get)
 
   override def receive: Receive = {
-    case token: PushJob =>
-      Source.single(token)
+    case pushJob: PushJob =>
+      Source.single(pushJob)
         .map( job => new ProducerRecord[Array[Byte], String](job.jobId, Json.toJson[PushJob](job).toString) )
         .runWith(Producer.plainSink(producerSettings))
+        .recover {
+          case x: Throwable => Logger.error("Produce kafka error: " + x.getMessage)
+        }
     case x => Logger.warn("Unsupported event: " + x)
   }
 }
