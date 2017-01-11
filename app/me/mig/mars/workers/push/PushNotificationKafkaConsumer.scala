@@ -28,6 +28,8 @@ class PushNotificationKafkaConsumer @Inject()(configuration: Configuration, syst
   def launch(topic: String) = {
     Consumer.committableSource(consumerSettings, Subscriptions.topics(topic))
       .map { msg =>
+        Logger.debug("committableOffset: " + msg.committableOffset)
+        Logger.debug("Reading data: " + msg.record.value())
         val pushJob = Json.parse(msg.record.value()).as[PushJob]
         Logger.info("Consumer committable message: " + pushJob)
         // Sending push notification

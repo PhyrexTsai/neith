@@ -9,5 +9,5 @@ object NotificationType extends Enumeration {
   val EMAIL = Value(1, "EMail")
   val SMS = Value(2, "SMS")
   val PUSH = Value(3, "Push")
-  val ALERT = Value(4, "Alert")
+  val POPUP = Value(4, "Pop-up")
 }

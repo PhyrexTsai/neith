@@ -1,6 +1,6 @@
 package me.mig.mars.workers.push
 
-import java.util.HashMap
+import java.util
 import java.util.regex.{Matcher, Pattern}
 import javax.inject.Inject
 
@@ -10,8 +10,9 @@ import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.sns.AmazonSNSClient
 import com.amazonaws.services.sns.model._
 import me.mig.mars.models.JobModel.PushJob
+import me.mig.mars.workers.push.PushNotificationWorker._
 import org.apache.commons.codec.binary.Hex
-import play.api.libs.json.Json
+import play.api.libs.json._
 import play.api.{Configuration, Logger}
 
 /**
@@ -20,16 +21,16 @@ import play.api.{Configuration, Logger}
 class PushNotificationWorker @Inject()(configuration: Configuration) extends Actor {
   private val snsClient = new AmazonSNSClient(
     new BasicAWSCredentials(
-      configuration.getString(PushNotificationWorker.ACCESS_KEY).getOrElse(""),
-      configuration.getString(PushNotificationWorker.SECRET).getOrElse("")
+      configuration.getString(ACCESS_KEY).getOrElse(""),
+      configuration.getString(SECRET).getOrElse("")
     )
   )
-  snsClient.setRegion(Region.getRegion(Regions.fromName(configuration.getString(PushNotificationWorker.REGION).getOrElse(""))))
-  snsClient.setEndpoint(configuration.getString(PushNotificationWorker.ENDPOINT).getOrElse(""))
-  private val gcmApplicationArn = configuration.getString(PushNotificationWorker.GCM_ARN)
-  private val apnsApplicationArn = configuration.getString(PushNotificationWorker.APNS_ARN)
-  if (gcmApplicationArn isEmpty) throw new NoSuchFieldException("Can't find any configuration for GCM application arn.")
-  if (apnsApplicationArn isEmpty) throw new NoSuchFieldException("Can't find any configuration for APNS application arn.")
+  snsClient.setRegion(Region.getRegion(Regions.fromName(configuration.getString(REGION).getOrElse(""))))
+  snsClient.setEndpoint(configuration.getString(ENDPOINT).getOrElse(""))
+  private val gcmApplicationArn = configuration.getString(GCM_ARN)
+  private val apnsApplicationArn = configuration.getString(APNS_ARN)
+  if (gcmApplicationArn.isEmpty) throw new NoSuchFieldException("Can't find any configuration for GCM application arn.")
+  if (apnsApplicationArn.isEmpty) throw new NoSuchFieldException("Can't find any configuration for APNS application arn.")
 
   private def createPlatformEndpoint(platformToken: String, applicationArn: String): String = {
     var endpointArn: String = null
@@ -76,8 +77,8 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
       val geaRes: GetEndpointAttributesResult =
         snsClient.getEndpointAttributes(geaReq)
 
-      updateNeeded = !geaRes.getAttributes().get("Token").equals(platformToken) ||
-        !geaRes.getAttributes().get("Enabled").equalsIgnoreCase("true")
+      updateNeeded = !geaRes.getAttributes.get("Token").equals(platformToken) ||
+        !geaRes.getAttributes.get("Enabled").equalsIgnoreCase("true")
 
     } catch {
       case nfe: NotFoundException =>
@@ -96,7 +97,7 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
       // The platform endpoint is out of sync with the current data;
       // update the token and enable it.
       Logger.info("Updating platform endpoint " + endpointArn)
-      val attribs: HashMap[String, String] = new HashMap()
+      val attribs: util.HashMap[String, String] = new util.HashMap()
       attribs.put("Token", platformToken)
       attribs.put("Enabled", "true")
       val saeReq: SetEndpointAttributesRequest =
@@ -131,13 +132,13 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
       Logger.info("Push Job: " + pushJob)
       // TODO: Error handling for Option value
       // TODO: compile message template with given parameters??
-      if (pushJob.gcmToken nonEmpty) {
+      if (pushJob.gcmToken.nonEmpty) {
         val gcmEndpoint = registerWithSns(pushJob.gcmToken.get, gcmApplicationArn.get)
-        publish(PushNotificationWorker.toGcmMessage(pushJob.message), gcmEndpoint)
+        publish(toGcmMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message, pushJob.userId, pushJob.username.getOrElse("")), gcmEndpoint)
       }
-      if (pushJob.iosToken nonEmpty) {
+      if (pushJob.iosToken.nonEmpty) {
         val apnsEndpoint = registerWithSns(Hex.encodeHexString(pushJob.iosToken.get), apnsApplicationArn.get)
-        publish(PushNotificationWorker.toApnsMessage(pushJob.message), apnsEndpoint)
+        publish(toApnsMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message), apnsEndpoint)
       }
 
     case _ => Logger.warn("Unsupported event")
@@ -155,21 +156,63 @@ object PushNotificationWorker {
   final val GCM_ARN = "push.gcm.snsArn"
   final val APNS_ARN = "push.apns.snsArn"
 
-  def toGcmMessage(message: String): String = {
+  // TODO: Might be common function ?
+  // TODO: Create Enumeration
+  def generateCallToAction(action: Map[String, String]): String = {
+    val value = action.get("value")
+    action.getOrElse("type", "").toLowerCase match {
+      case "post" =>  s"mig33:showPost('${ value }', '0')"
+      case "profile" => s"mig33:profile('${ value }')"
+      case "link" => s"mig33:url('${ value }')"
+      case "chatroom" => s"mig33:joinChatroom('${ value }')"
+      case x =>
+        Logger.warn("Unsupported action type: " + x)
+        throw new IllegalArgumentException("Unsupported action type: " + x)
+    }
+  }
+
+  def toGcmMessage(action: String, message: String, userId: Int, username : String): String = {
     Json.obj(
       "GCM" -> Json.obj(
         "data" -> Json.obj(
-          "message" -> Json.toJson(message)
+          "_version" -> "2.0",
+          "timestamp" -> System.currentTimeMillis(),
+          "image" -> Json.obj("title " -> ""),  // might be unused
+          "isBatched" -> false,  // might be unused
+          "variables" -> Json.arr(Json.obj("name" -> "author")), // might be unused
+          "id" -> "",
+          "actions" -> Json.arr(
+            Json.obj(
+              "type" -> "URL",  // might be unused
+              "label" -> Json.obj("text" -> "View Now"),  // might be unused
+              "url" -> Json.arr(  // should be flatten ?
+                Json.obj(
+                  "view" -> "touch",
+                  "url" -> action
+                )
+              )
+            )
+          ),
+          "message" -> message,
+          "title" -> "You've been migged!",
+          "type" -> "SYS_ALERT",  // might be unused
+          "user" -> Json.obj(
+            "username" -> username,
+            "id" -> userId
+          )
         )
       ).toString()
     ).toString()
   }
 
-  def toApnsMessage(message: String): String = {
+  def toApnsMessage(action: String, message: String): String = {
     Json.obj(
       "APNS" -> Json.obj(
         "aps" -> Json.obj(
-          "alert" -> Json.toJson(message)
+          "alert" -> Json.obj(
+            "body" -> message,
+            "alertAction" -> action
+          )
         )
       ).toString()
     ).toString()
