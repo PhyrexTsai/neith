@@ -7,6 +7,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import me.mig.mars.models.JobModel.{CreateJob, CreateJobAck, DispatchJob, GetJobsAck}
 import me.mig.mars.models.NotificationModel.GetNotificationTypesAck
+import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.workers.push.PushNotificationKafkaConsumer
@@ -63,7 +64,7 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
     JobScheduleService.addRunningJob(jobId, cancellable)
   }
 
-  @deprecated
+  @deprecated(message = "Since jobs will change frequently, we do not need to bind each job on the stop hook.", since = "Next release if service is running stabl")
   private def addLifeCycleStopHook(job: Cancellable): Unit = {
     // Application Hooks
     appLifecycle.addStopHook { () =>
@@ -118,11 +119,12 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
   }
 
   def getNotificationTypes(): Flow[Int, GetNotificationTypesAck, _] = {
-    Flow[Int].mapAsync(2)(_ =>
-      keyspace.getNotificationTypes().transform(
-        GetNotificationTypesAck(_),
-        ex => ex
-      )
+    Flow[Int].map(_ =>
+      GetNotificationTypesAck(NotificationType.values.map(_.toString).toList)
+//      keyspace.getNotificationTypes().transform(
+//        GetNotificationTypesAck(_),
+//        ex => ex
+//      )
     )
   }
 

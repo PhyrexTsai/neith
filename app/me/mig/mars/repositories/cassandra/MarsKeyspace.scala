@@ -39,7 +39,7 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
   init
 
   private val jobsTable = new JobsTable()
-  private val notificationTypeTable = new NotificationTypeTable()
+//  private val notificationTypeTable = new NotificationTypeTable()
 
   // Try to create keyspace and tables if not exist.
   def init() = {
@@ -61,7 +61,7 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
 
   def disableJob(jobId: String): Future[Boolean] = jobsTable.disableJob(jobId)
 
-  def getNotificationTypes(): Future[List[String]] = notificationTypeTable.getNotificationTypes()
+//  def getNotificationTypes(): Future[List[String]] = notificationTypeTable.getNotificationTypes()
 
   applicationLifecycle.addStopHook(() => {
     Future.successful(session.close())
@@ -175,17 +175,17 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
 
   }
 
-  private[cassandra] class NotificationTypeTable() {
-    private final val SELECT_TYPES = "select * from mars.notificationtype"
-
-    private[cassandra] def getNotificationTypes(): Future[List[String]] = {
-      val queryStmt = new SimpleStatement(SELECT_TYPES)
-
-      CassandraSource(queryStmt).runWith(Sink.seq).transform(
-        _.map(_.getString(0)).toList,
-        ex => ex
-      )
-    }
-  }
+//  private[cassandra] class NotificationTypeTable() {
+//    private final val SELECT_TYPES = "select * from mars.notificationtype"
+//
+//    private[cassandra] def getNotificationTypes(): Future[List[String]] = {
+//      val queryStmt = new SimpleStatement(SELECT_TYPES)
+//
+//      CassandraSource(queryStmt).runWith(Sink.seq).transform(
+//        _.map(_.getString(0)).toList,
+//        ex => ex
+//      )
+//    }
+//  }
 
 }
