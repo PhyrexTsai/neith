@@ -55,6 +55,10 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
 
   private def scheduleJob(jobId: String, delay: Long): Unit = {
     Logger.debug("scheduleJob delay: " + delay)
+    if (JobScheduleService.isExist(jobId)) {
+      Logger.warn(s"Job ${jobId} already running, stop and start the new one.")
+      JobScheduleService.removeRunningJob(jobId)
+    }
     val cancellable = system.scheduler.scheduleOnce(
       FiniteDuration(delay, MILLISECONDS),
       jobScheduleWorker,
@@ -132,6 +136,10 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
 
 object JobScheduleService {
   private val runningJobMap = mutable.HashMap[String, Cancellable]()
+
+  def isExist(jobId: String): Boolean = {
+    runningJobMap.get(jobId) nonEmpty
+  }
 
   def addRunningJob(jobId: String, scheduled: Cancellable): Unit = {
     runningJobMap += (jobId -> scheduled)
