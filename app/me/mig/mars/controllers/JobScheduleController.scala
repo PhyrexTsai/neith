@@ -9,6 +9,7 @@ import me.mig.mars.ErrorHandler
 import me.mig.mars.models.JobModel.{CreateJob, CreateJobAck, GetJobsAck}
 import me.mig.mars.models.NotificationModel.GetNotificationTypesAck
 import me.mig.mars.services.JobScheduleService
+import me.mig.mars.workers.push.PushNotificationWorker
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 
@@ -66,6 +67,15 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
           Json.toJson( GetNotificationTypesAck(List.empty, Some("Getting notification types encounters error: " + x.getMessage)) )
         )
       }
+  }
+
+  def fakeNotification(`type`: String) = Action.async { request =>
+    Source.single(1)
+      .map { nothing =>
+        PushNotificationWorker.toGcmMessage(PushNotificationWorker.generateCallToAction(Map("type" -> `type`, "value" -> "1234567890")), s"push ${`type`} notification", 1234567, "fake user")
+      }
+      .runWith(Sink.head)
+      .map(result => Ok(Json.parse(result)))
   }
 
 }

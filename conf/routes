@@ -13,6 +13,7 @@ POST    /jobs                       me.mig.mars.controllers.JobScheduleControlle
 GET     /jobs                       me.mig.mars.controllers.JobScheduleController.getJobs(id: String = "", page: Option[Int], pageSize: Option[Int])
 GET     /jobs/:id                   me.mig.mars.controllers.JobScheduleController.getJobs(id: String, page: Option[Int], pageSize: Option[Int])
 GET     /notificationtypes          me.mig.mars.controllers.JobScheduleController.getNotificationTypes()
+GET     /fakeNotification/:ntype    me.mig.mars.controllers.JobScheduleController.fakeNotification(ntype: String)
 # An example controller showing how to write asynchronous code
 GET     /health                     me.mig.mars.controllers.HealthController.message
 

@@ -159,7 +159,7 @@ object PushNotificationWorker {
   // TODO: Might be common function ?
   // TODO: Create Enumeration
   def generateCallToAction(action: Map[String, String]): String = {
-    val value = action.get("value")
+    val value = action.get("value").getOrElse("")
     action.getOrElse("type", "").toLowerCase match {
       case "post" =>  s"mig33:showPost('${ value }', '0')"
       case "profile" => s"mig33:profile('${ value }')"
