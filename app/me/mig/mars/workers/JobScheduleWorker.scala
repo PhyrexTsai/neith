@@ -104,10 +104,10 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
       case NotificationType.PUSH =>
         db.getUserTokensByLabelAndCountry(job.label, job.country).map(
           tokens => {
-            tokens.toList.map(token => PushJob(job.id, token._1, job.message, token._2, token._3, token._4))
+            tokens.toList.map(token => PushJob(job.id, token._1, job.message, Some(job.callToAction), token._2, token._3, token._4))
           }
         )
-      case NotificationType.ALERT =>
+      case NotificationType.POPUP =>
         Logger.info("Coming soon...")
         Future.successful(List.empty[PushJob])
       case x =>

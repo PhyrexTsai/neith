@@ -88,15 +88,19 @@ releaseProcess := Seq[ReleaseStep](
 lazy val jira = SettingKey[String]("jira", "The JIRA issue parameter to be propagated to git commit message.")
 
 lazy val commonSettings = Seq(
-  rpmVendor := "migme",
-  rpmLicense := Some("migme"),
-  version in Rpm := "0.0.6",
-  packageDescription in Rpm := "Notificatoin service of Migme.",
+//  rpmVendor := "migme",
+//  rpmLicense := Some("migme"),
+//  version in Rpm := "0.0.6",
+//  packageDescription in Rpm := "Notificatoin service of Migme.",
 
   organization := "me.mig.mars",
   version := (version in ThisBuild).value,
   scalaVersion := "2.11.8",
-  jira := sys.props.get("JIRA").getOrElse("QA-XXX")
+  jira := sys.props.get("JIRA").getOrElse("QA-XXX"),
+
+  // Docker settings
+  dockerRepository := Some("192.168.0.21:5000"),
+  dockerUpdateLatest := true
 )
 
 // Gatling testing

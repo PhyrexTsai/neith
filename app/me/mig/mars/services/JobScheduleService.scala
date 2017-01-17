@@ -6,6 +6,8 @@ import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import me.mig.mars.models.JobModel.{CreateJob, CreateJobAck, DispatchJob, GetJobsAck}
+import me.mig.mars.models.NotificationModel.GetNotificationTypesAck
+import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.workers.push.PushNotificationKafkaConsumer
@@ -13,7 +15,7 @@ import play.api.inject.ApplicationLifecycle
 import play.api.libs.concurrent.InjectedActorSupport
 import play.api.{Configuration, Logger}
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -26,10 +28,10 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
 
   // Loading stored jobs and scheduling to dispatch...
   Logger.info("Starting JobScheduleService to load jobs...")
-  Source.single("").via(getJobs).map(
+  Source.single("").via(getJobs()).map(
     jobsAck => {
       Logger.info("Loading " + jobsAck.data.size + " jobs")
-      jobsAck.data.map(
+      jobsAck.data.foreach(
         job => {
           if (!job.disabled.getOrElse(false)) {
             Logger.debug("job loaded: " + job.id)
@@ -53,6 +55,10 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
 
   private def scheduleJob(jobId: String, delay: Long): Unit = {
     Logger.debug("scheduleJob delay: " + delay)
+    if (JobScheduleService.isExist(jobId)) {
+      Logger.warn(s"Job ${jobId} already running, stop and start the new one.")
+      JobScheduleService.removeRunningJob(jobId)
+    }
     val cancellable = system.scheduler.scheduleOnce(
       FiniteDuration(delay, MILLISECONDS),
       jobScheduleWorker,
@@ -62,7 +68,7 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
     JobScheduleService.addRunningJob(jobId, cancellable)
   }
 
-  @deprecated
+  @deprecated(message = "Since jobs will change frequently, we do not need to bind each job on the stop hook.", since = "Next release if service is running stabl")
   private def addLifeCycleStopHook(job: Cancellable): Unit = {
     // Application Hooks
     appLifecycle.addStopHook { () =>
@@ -116,10 +122,24 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
     })
   }
 
+  def getNotificationTypes(): Flow[Int, GetNotificationTypesAck, _] = {
+    Flow[Int].map(_ =>
+      GetNotificationTypesAck(NotificationType.values.map(_.toString).toList)
+//      keyspace.getNotificationTypes().transform(
+//        GetNotificationTypesAck(_),
+//        ex => ex
+//      )
+    )
+  }
+
 }
 
 object JobScheduleService {
-  private val runningJobMap = HashMap[String, Cancellable]()
+  private val runningJobMap = mutable.HashMap[String, Cancellable]()
+
+  def isExist(jobId: String): Boolean = {
+    runningJobMap.get(jobId) nonEmpty
+  }
 
   def addRunningJob(jobId: String, scheduled: Cancellable): Unit = {
     runningJobMap += (jobId -> scheduled)

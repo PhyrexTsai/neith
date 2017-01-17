@@ -23,6 +23,7 @@ import scala.concurrent.Future
 @Singleton
 class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Configuration, applicationLifecycle: ApplicationLifecycle) {
   import collection.JavaConversions._
+  import materializer.executionContext
 
   private val config = configuration.underlying.getConfig("cassandra")
   private final val CREATE_KEYSPACE = "CREATE KEYSPACE IF NOT EXISTS mars WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': '1' }"
@@ -38,6 +39,7 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
   init
 
   private val jobsTable = new JobsTable()
+//  private val notificationTypeTable = new NotificationTypeTable()
 
   // Try to create keyspace and tables if not exist.
   def init() = {
@@ -59,13 +61,14 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
 
   def disableJob(jobId: String): Future[Boolean] = jobsTable.disableJob(jobId)
 
+//  def getNotificationTypes(): Future[List[String]] = notificationTypeTable.getNotificationTypes()
+
   applicationLifecycle.addStopHook(() => {
     Future.successful(session.close())
   })
 
   // Tables
   private[cassandra] class JobsTable() {
-    import materializer.executionContext
 
     private final val INSERT_JOB = "INSERT INTO mars.jobs (id, creator, label, country, startTime, endTime, interval, notificationType, message, callToAction, createdTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     private final val SELECT_JOBS = "SELECT * from mars.jobs"
@@ -171,4 +174,18 @@ class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Config
 //    }
 
   }
+
+//  private[cassandra] class NotificationTypeTable() {
+//    private final val SELECT_TYPES = "select * from mars.notificationtype"
+//
+//    private[cassandra] def getNotificationTypes(): Future[List[String]] = {
+//      val queryStmt = new SimpleStatement(SELECT_TYPES)
+//
+//      CassandraSource(queryStmt).runWith(Sink.seq).transform(
+//        _.map(_.getString(0)).toList,
+//        ex => ex
+//      )
+//    }
+//  }
+
 }
