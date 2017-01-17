@@ -1,3 +1,4 @@
+import com.typesafe.sbt.packager.docker.ExecCmd
 import sbt.Keys._
 import sbtrelease.ReleaseStateTransformations._
 
@@ -87,6 +88,8 @@ releaseProcess := Seq[ReleaseStep](
 // ==============================================
 lazy val jira = SettingKey[String]("jira", "The JIRA issue parameter to be propagated to git commit message.")
 
+lazy val appSecret = Option(System.getProperty("appsecret")).getOrElse("changeme")
+
 lazy val commonSettings = Seq(
 //  rpmVendor := "migme",
 //  rpmLicense := Some("migme"),
@@ -99,6 +102,9 @@ lazy val commonSettings = Seq(
   jira := sys.props.get("JIRA").getOrElse("QA-XXX"),
 
   // Docker settings
+  dockerCommands ++= Seq(
+    ExecCmd("ENTRYPOINT", "bin/mars", s"-Dplay.crypto.secret='${appSecret}'")
+  ),
   dockerRepository := Some("192.168.0.21:5000"),
   dockerUpdateLatest := true
 )
@@ -106,14 +112,18 @@ lazy val commonSettings = Seq(
 // Gatling testing
 lazy val GTest = config("gatling") extend (Test)
 
-lazy val mars = (project in file(".")).
-  enablePlugins(PlayScala).
-  enablePlugins(GatlingPlugin).
-  enablePlugins(JavaServerAppPackaging).
-  configs(GTest).
-  settings(inConfig(GTest)(Defaults.testSettings): _*).
-  settings(
+lazy val testMars = project
+  .in(file("build/test"))
+  .enablePlugins(GatlingPlugin)
+  .configs(GTest)
+  .settings(inConfig(GTest)(Defaults.testSettings): _*)
+  .settings(
     scalaSource in GTest := baseDirectory.value / "/test",
     dependencyOverrides += "org.asynchttpclient" % "async-http-client" % "2.0.10" % Test
-  ).
-  settings(commonSettings: _*)
+  )
+  .dependsOn(mars)
+
+lazy val mars = (project in file("."))
+  .enablePlugins(PlayScala)
+  .enablePlugins(JavaServerAppPackaging)
+  .settings(commonSettings: _*)
