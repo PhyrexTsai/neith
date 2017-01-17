@@ -174,7 +174,7 @@ object PushNotificationWorker {
   def toGcmMessage(action: String, message: String, userId: Int, username : String): String = {
     Json.obj(
       "GCM" -> Json.obj(
-        "data" -> Json.obj(
+        "message" -> Json.obj(
           "_version" -> "2.0",
           "timestamp" -> System.currentTimeMillis(),
           "image" -> Json.obj("title " -> ""),  // might be unused
