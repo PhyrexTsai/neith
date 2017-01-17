@@ -1,0 +1,15 @@
+{
+  "id": "mars",
+  "cpus": 0.5,
+  "mem": 512.0,
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "mars:latest",
+      "network": "BRIDGE",
+      "portMappings": [
+        { "containerPort": 9000, "hostPort": 9000 }
+      ]
+    }
+  }
+}
