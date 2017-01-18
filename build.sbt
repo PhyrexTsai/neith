@@ -1,4 +1,4 @@
-import com.typesafe.sbt.packager.docker.ExecCmd
+import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 import sbt.Keys._
 import sbtrelease.ReleaseStateTransformations._
 
@@ -88,7 +88,7 @@ releaseProcess := Seq[ReleaseStep](
 // ==============================================
 lazy val jira = SettingKey[String]("jira", "The JIRA issue parameter to be propagated to git commit message.")
 
-lazy val appSecret = Option(System.getProperty("appsecret")).getOrElse("changeme")
+lazy val appSecret = Option(System.getProperty("appsecret")).getOrElse("J@O6CmRZgI9q5b;mIklDTh18]EQVitLl85@cPI:y=gX0wQ>QCrq[RqzotyAN0TW8")
 
 lazy val commonSettings = Seq(
 //  rpmVendor := "migme",
@@ -102,10 +102,16 @@ lazy val commonSettings = Seq(
   jira := sys.props.get("JIRA").getOrElse("QA-XXX"),
 
   // Docker settings
-  dockerCommands ++= Seq(
-    ExecCmd("ENTRYPOINT", "bin/mars", s"-Dplay.crypto.secret='${appSecret}'")
-  ),
-  dockerRepository := Some("192.168.0.21:5000"),
+  dockerCommands := dockerCommands.value.takeWhile {
+    case cmd: Cmd => !cmd.cmd.equals("USER")
+    case _ => true
+  } ++ Seq(
+    ExecCmd("RUN", "mkdir", "-p", "/usr/mars"),
+    ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/usr/mars"),
+    Cmd("USER", "daemon")
+  ) ++ dockerCommands.value.takeRight(2),
+  dockerEntrypoint in Docker := Seq("bin/mars", s"-Dplay.crypto.secret='${appSecret}'"),
+  dockerRepository := Some("registry.marathon.l4lb.thisdcos.directory:5000"), //Some("192.168.0.21:5000"),
   dockerUpdateLatest := true
 )
 
