@@ -9,7 +9,8 @@
       "network": "BRIDGE",
       "portMappings": [
         { "containerPort": 9000, "hostPort": 9000 }
-      ]
+      ],
+      "force_pull_image": true
     }
   }
 }
