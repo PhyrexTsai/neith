@@ -1,0 +1,67 @@
+<!-- https://www.playframework.com/documentation/latest/SettingsLogger -->
+<configuration status="WARN" monitorInterval="60">
+    <conversionRule conversionWord="coloredLevel" converterClass="play.api.libs.logback.ColoredLevel" />
+    <property name="appName" value="neith" />
+
+    <!-- File output -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.dir:-/var/log/${appName}}/${appName}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>${log.dir:-/var/log/${appName}}/${appName}.%d{yyyy-MM-dd}-%i.log.gz</fileNamePattern>
+            <!-- keep 60 days' worth of history -->
+            <maxHistory>60</maxHistory>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%date [%level] from %logger in %thread - %message%n%xException</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%coloredLevel %logger{15} - %message%n%xException{10}</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>${logstash.host:-localhost}:${logstash.port:-5000}</destination>
+        <!-- encoder is required -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
+    </appender>
+
+    <!-- Faster than logback asynchronous in theory -->
+    <appender name="ASYNC_FILE" class="net.logstash.logback.appender.LoggingEventAsyncDisruptorAppender">
+        <waitStrategyType>sleeping</waitStrategyType>
+        <appender-ref ref="FILE" />
+    </appender>
+
+    <appender name="ASYNC_STDOUT" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="STDOUT" />
+    </appender>
+
+    <logger name="play" level="INFO" />
+    <logger name="application" level="${log.root.level:-DEBUG}" />
+    <logger name="slick" level="INFO"/>
+    <logger name="com.zaxxer.hikari" level="INFO" />
+    <logger name="org.asynchttpclient.netty.channel" level="INFO" />
+
+    <!-- Off these ones as they are annoying, and anyway we manage configuration ourselves -->
+    <!--<logger name="com.avaje.ebean.config.PropertyMapLoader" level="OFF" />-->
+    <!--<logger name="com.avaje.ebeaninternal.server.core.XmlConfigLoader" level="OFF" />-->
+    <!--<logger name="com.avaje.ebeaninternal.server.lib.BackgroundThread" level="OFF" />-->
+    <!--<logger name="com.gargoylesoftware.htmlunit.javascript" level="OFF" />-->
+
+    <!-- Turn down Kafka noise -->
+    <!--<logger name="org.apache.kafka" level="WARN" />-->
+    <!--<logger name="javax.management.mbeanserver" level="WARN" />-->
+
+    <root level="${log.root.level:-DEBUG}">
+        <appender-ref ref="ASYNC_FILE" />
+        <appender-ref ref="ASYNC_STDOUT" />
+        <!--<appender-ref ref="LOGSTASH" />-->
+    </root>
+
+</configuration>
