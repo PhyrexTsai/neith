@@ -52,10 +52,10 @@ class ImageController @Inject()(imageService: ImageService, config: Configuratio
     case ex: Throwable =>
       Logger.error("Exception occurred:", ex)
       ex match {
-          case _: NeithException =>
+          case e: NeithException =>
             BadRequest(Json.obj("error" -> Json.obj(
-              "errno" -> Json.toJson(ex.asInstanceOf[NeithException].errorCode),
-              "message" -> Json.toJson(ex.getMessage)
+              "errno" -> Json.toJson(e.errorCode),
+              "message" -> Json.toJson(e.getMessage)
             )))
       }
   }
