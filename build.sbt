@@ -101,17 +101,26 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.11.8",
   jira := sys.props.get("JIRA").getOrElse("QA-XXX"),
 
+  // Disable publishing the scaladoc jar
+  sources in (Compile, doc) := Seq.empty,
+  publishArtifact in (Compile, packageDoc) in ThisBuild := false,
+
   // Docker settings
   dockerCommands := dockerCommands.value.takeWhile {
     case cmd: Cmd => !cmd.cmd.equals("USER")
     case _ => true
   } ++ Seq(
-    ExecCmd("RUN", "mkdir", "-p", "/usr/mars"),
-    ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/usr/mars"),
+    ExecCmd("RUN", "apt-get", "update"),
+    Cmd("ENV", "DEBIAN_FRONTEND=noninteractive"),
+    ExecCmd("RUN", "apt-get", "install", "-y", "postfix"),
+    ExecCmd("RUN", "mkdir", "-p", "/usr/local/mars"),
+    ExecCmd("RUN", "mkdir", "-p", "/var/log/mars"),
+    ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/usr/local/mars"),
+    ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/var/log/mars"),
     Cmd("USER", "daemon")
   ) ++ dockerCommands.value.takeRight(2),
   dockerEntrypoint in Docker := Seq("bin/mars", s"-Dplay.crypto.secret='${appSecret}'"),
-  dockerRepository := Some("registry.marathon.l4lb.thisdcos.directory:5000"), //Some("192.168.0.21:5000"),
+  dockerRepository := Some("192.168.0.93:5000"), //Some("192.168.0.21:5000"),
   dockerUpdateLatest := true
 )
 

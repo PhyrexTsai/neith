@@ -20,7 +20,24 @@
 
 # Setting JAVA_OPTS
 # -----------------
-JAVA_OPTS="-Dpidfile.path=/var/run/${{app_name}}/play.pid -Dakka.cluster.seed-nodes.0=akka.tcp://MarsSystem@127.0.0.1:4416 -Dplay.crypto.secret='F9cyRTciKr69U:k0vY_y:=UkI8MkS6^b@PJj^qLO0LQesbMQTOt^7WlUOE30lG7Y'"
+JAVA_OPTS="-Dpidfile.path=/var/run/${{app_name}}/play.pid
+  -Dakka.cluster.seed-nodes.0=akka.tcp://MarsSystem@127.0.0.1:4416
+  -Dplay.crypto.secret='F9cyRTciKr69U:k0vY_y:=UkI8MkS6^b@PJj^qLO0LQesbMQTOt^7WlUOE30lG7Y'
+  -DfusionDB=lynx-sqls1-vip.stg.sjc02.projectgoth.com
+  -DfusionDBPass='a8h4ZtTfpzl.'
+  -Dkafka.bootstrap-servers.0.host=broker-0.kafka.mesos
+  -Dkafka.bootstrap-servers.0.port=9092
+  -Dkafka.bootstrap-servers.1.host=broker-1.kafka.mesos
+  -Dkafka.bootstrap-servers.1.port=9092
+  -Dkafka.bootstrap-servers.2.host=broker-2.kafka.mesos
+  -Dkafka.bootstrap-servers.2.port=9092
+  -Dcassandra.hosts.0=node.cassandra.l4lb.thisdcos.directory
+  -Dpush.sns.region='us-west-2'
+  -Dpush.sns.endpoint='https://sns.us-west-2.amazonaws.com'
+  -Dpush.sns.accessKey='AKIAI23YOQBDUF2X5WCQ'
+  -Dpush.sns.secret='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'
+  -Dpush.gcm.snsArn='arn:aws:sns:us-west-2:090876619027:app/GCM/EPN-GCM-STG'
+  -Dpush.apns.snsArn='arn:aws:sns:us-west-2:090876619027:app/APNS/EPN-APNS-STG'"
 
 # Setting PIDFILE
 # ---------------

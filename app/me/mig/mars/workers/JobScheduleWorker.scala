@@ -69,6 +69,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
             pushNotificationKafkaProducer ! pushJob
           }
         ).runWith(Sink.ignore)
+
     case x =>
       Logger.warn("Unsupported message to dispatch: " + x)
   }

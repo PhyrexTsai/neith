@@ -20,12 +20,15 @@ import play.api.{Configuration, Logger}
 class PushNotificationKafkaConsumer @Inject()(configuration: Configuration, system: ActorSystem, implicit val materializer: Materializer, @Named("PushNotificationWorker") pushNotificationWorker: ActorRef) {
   import system.dispatcher
 
+  Logger.info("bootstrap-servers: " + configuration.underlying.getString("kafka.bootstrap-servers"))
+
   val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
-    .withBootstrapServers(configuration.getString("kafka.host").get + ":" + configuration.getInt("kafka.port").get)
+    .withBootstrapServers(configuration.underlying.getString("kafka.bootstrap-servers"))
     .withGroupId("Push")
     .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
   def launch(topic: String) = {
+    Logger.info("Consumer launching topic: " + topic)
     Consumer.committableSource(consumerSettings, Subscriptions.topics(topic))
       .map { msg =>
         Logger.debug("committableOffset: " + msg.committableOffset)

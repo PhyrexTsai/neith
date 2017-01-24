@@ -1,6 +1,6 @@
 import akka.routing.{BalancingPool, SmallestMailboxPool}
 import com.google.inject.AbstractModule
-import me.mig.mars.services.{EmailService, JobScheduleService, PushNotificationService, TemplateBackgroundService}
+import me.mig.mars.services.{EmailService, JobScheduleService, TemplateBackgroundService}
 import me.mig.mars.workers.JobScheduleWorker
 import me.mig.mars.workers.push.{PushNotificationKafkaProducer, PushNotificationWorker}
 import play.api.libs.concurrent.AkkaGuiceSupport
@@ -27,7 +27,7 @@ class Module extends AbstractModule with AkkaGuiceSupport {
     // Ask Guice to create an instance of EmailService and PushNotificationService when the
     // application starts.
     bind(classOf[EmailService]).asEagerSingleton()
-    bind(classOf[PushNotificationService]).asEagerSingleton()
+//    bind(classOf[PushNotificationService]).asEagerSingleton()
     bind(classOf[JobScheduleService]).asEagerSingleton()
   }
 

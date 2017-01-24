@@ -20,7 +20,7 @@ class PushNotificationKafkaProducer @Inject()(configuration: Configuration, syst
   import system.dispatcher
 
   private val producerSettings = ProducerSettings(system, new ByteArraySerializer, new StringSerializer)
-    .withBootstrapServers(configuration.getString("kafka.host").get + ":" + configuration.getInt("kafka.port").get)
+    .withBootstrapServers(configuration.underlying.getString("kafka.bootstrap-servers"))
 
   override def receive: Receive = {
     case pushJob: PushJob =>

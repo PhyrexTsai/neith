@@ -96,6 +96,8 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
           Logger.info("Job created: " + jobId)
           val delay = job.startTime - System.currentTimeMillis()
           scheduleJob(jobId, delay)
+          // Initializing Kafa consumers
+          pushNotificationKafkaConsumer.launch(job.id)
           CreateJobAck(true)
         },
         ex => new InterruptedException("Creating job into cassandra encounters error: " + ex.getMessage)
