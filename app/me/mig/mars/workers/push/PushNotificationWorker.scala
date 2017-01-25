@@ -38,6 +38,7 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
       val req = new CreatePlatformEndpointRequest()
         .withPlatformApplicationArn(applicationArn)
         .withToken(platformToken)
+        .withCustomUserData("CustomData - Useful to store endpoint specific data")  // Try to resolve the different attribute with same token issue.
       val endpointResult = snsClient.createPlatformEndpoint(req)
       endpointArn = endpointResult.getEndpointArn
     } catch {
@@ -132,15 +133,20 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
       Logger.info("Push Job: " + pushJob)
       // TODO: Error handling for Option value
       // TODO: compile message template with given parameters??
-      if (pushJob.gcmToken.nonEmpty) {
-        val gcmEndpoint = registerWithSns(pushJob.gcmToken.get, gcmApplicationArn.get)
-        publish(toGcmMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message, pushJob.userId, pushJob.username.getOrElse("")), gcmEndpoint)
+      try {
+        if (pushJob.gcmToken.nonEmpty) {
+          val gcmEndpoint = registerWithSns(pushJob.gcmToken.get, gcmApplicationArn.get)
+          publish(toGcmMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message, pushJob.userId, pushJob.username.getOrElse("")), gcmEndpoint)
+        }
+        if (pushJob.iosToken.nonEmpty) {
+          val apnsEndpoint = registerWithSns(Hex.encodeHexString(pushJob.iosToken.get), apnsApplicationArn.get)
+          publish(toApnsMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message), apnsEndpoint)
+        }
       }
-      if (pushJob.iosToken.nonEmpty) {
-        val apnsEndpoint = registerWithSns(Hex.encodeHexString(pushJob.iosToken.get), apnsApplicationArn.get)
-        publish(toApnsMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message), apnsEndpoint)
+      catch {
+        case ex: EndpointDisabledException =>
+          Logger.warn("Disabled endpoint: " + ex.getMessage + ", should be removed??")
       }
-
     case _ => Logger.warn("Unsupported event")
   }
 }
@@ -174,31 +180,33 @@ object PushNotificationWorker {
   def toGcmMessage(action: String, message: String, userId: Int, username : String): String = {
     Json.obj(
       "GCM" -> Json.obj(
-        "message" -> Json.obj(
-          "_version" -> "2.0",
-          "timestamp" -> System.currentTimeMillis(),
-          "image" -> Json.obj("title " -> ""),  // might be unused
-          "isBatched" -> false,  // might be unused
-          "variables" -> Json.arr(Json.obj("name" -> "author")), // might be unused
-          "id" -> "",
-          "actions" -> Json.arr(
-            Json.obj(
-              "type" -> "URL",  // might be unused
-              "label" -> Json.obj("text" -> "View Now"),  // might be unused
-              "url" -> Json.arr(  // should be flatten ?
-                Json.obj(
-                  "view" -> "touch",
-                  "url" -> action
+        "data" -> Json.obj(
+          "message" -> Json.obj(
+            "_version" -> "2.0",
+            "timestamp" -> System.currentTimeMillis(),
+            "image" -> Json.obj("title " -> ""),  // might be unused
+            "isBatched" -> false,  // might be unused
+            "variables" -> Json.arr(Json.obj("name" -> "author")), // might be unused
+            "id" -> System.currentTimeMillis(),
+            "actions" -> Json.arr(
+              Json.obj(
+                "type" -> "URL",  // might be unused
+                "label" -> Json.obj("text" -> "View Now"),  // might be unused
+                "url" -> Json.arr(  // should be flatten ?
+                  Json.obj(
+                    "view" -> "touch",
+                    "url" -> action
+                  )
                 )
               )
+            ),
+            "message" -> message,
+            "title" -> "You've been migged!",
+            "type" -> "SYS_ALERT",  // might be unused
+            "user" -> Json.obj(
+              "username" -> username,
+              "id" -> userId
             )
-          ),
-          "message" -> message,
-          "title" -> "You've been migged!",
-          "type" -> "SYS_ALERT",  // might be unused
-          "user" -> Json.obj(
-            "username" -> username,
-            "id" -> userId
           )
         )
       ).toString()
