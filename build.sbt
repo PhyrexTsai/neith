@@ -117,9 +117,8 @@ lazy val commonSettings = Seq(
     ExecCmd("RUN", "mkdir", "-p", "/var/log/mars"),
     ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/usr/local/mars"),
     ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/var/log/mars"),
-    Cmd("USER", "daemon"),
-    Cmd("CMD", "bin/mars")
-  ),
+    Cmd("USER", "daemon")
+  ) ++ dockerCommands.value.takeRight(2),
   dockerEntrypoint in Docker := Seq("bin/mars", s"-Dplay.crypto.secret='${appSecret}'"),
   dockerRepository := Some("master.mesos:5000"), //Some("192.168.0.93:5000"),
   dockerUpdateLatest := true
