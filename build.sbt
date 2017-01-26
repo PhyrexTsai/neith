@@ -120,7 +120,7 @@ lazy val commonSettings = Seq(
     Cmd("USER", "daemon")
   ) ++ dockerCommands.value.takeRight(2),
   dockerEntrypoint in Docker := Seq("bin/mars", s"-Dplay.crypto.secret='${appSecret}'"),
-  dockerRepository := Some("192.168.0.21:5000"), //Some("192.168.0.93:5000"),
+  dockerRepository := Some("master.mesos:5000"), //Some("192.168.0.93:5000"),
   dockerUpdateLatest := true
 )
 
