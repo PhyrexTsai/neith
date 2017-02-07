@@ -91,10 +91,10 @@ lazy val jira = SettingKey[String]("jira", "The JIRA issue parameter to be propa
 lazy val appSecret = Option(System.getProperty("appsecret")).getOrElse("J@O6CmRZgI9q5b;mIklDTh18]EQVitLl85@cPI:y=gX0wQ>QCrq[RqzotyAN0TW8")
 
 lazy val commonSettings = Seq(
-//  rpmVendor := "migme",
-//  rpmLicense := Some("migme"),
-//  version in Rpm := "0.0.6",
-//  packageDescription in Rpm := "Notificatoin service of Migme.",
+  rpmVendor := "migme",
+  rpmLicense := Some("migme"),
+  version in Rpm := "0.0.7",
+  packageDescription in Rpm := "Notificatoin service of Migme.",
 
   organization := "me.mig.mars",
   version := (version in ThisBuild).value,
