@@ -7,7 +7,7 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import akka.actor.{Actor, Props}
 import com.typesafe.config.Config
-import me.mig.mars.models.NotificationTemplateRepository
+import me.mig.mars.repositories.mysql.{FusionDatabase, NotificationMappings}
 import me.mig.mars.services.{EmailTemplate, TemplateBackgroundService}
 import play.api.Logger
 import play.twirl.api.Html
@@ -22,9 +22,9 @@ import scala.tools.nsc.{Global, Settings}
 /**
   * Created by jameshsiao on 8/30/16.
   */
-class TemplateChecker(config: Config, emailTemplateRepo: NotificationTemplateRepository, templateBackgroundService: TemplateBackgroundService) extends Actor {
+class TemplateChecker(config: Config, fusionDB: FusionDatabase, templateBackgroundService: TemplateBackgroundService) extends Actor {
   import TemplateChecker._
-  import me.mig.mars.models.NotificationMappings._
+  import NotificationMappings._
 
   class TemplateBuilder(generatedDir: File, generatedClasses: File) {
     implicit val classloader = new URLClassLoader(Array(generatedClasses.toURI.toURL), Class.forName("play.twirl.compiler.TwirlCompiler").getClassLoader)
@@ -63,7 +63,7 @@ class TemplateChecker(config: Config, emailTemplateRepo: NotificationTemplateRep
       val className = templateClassPrefix + templateMap.toString
 
       // Slick query
-      emailTemplateRepo.getTemplateByMapId(templateMap).map { templates =>
+      fusionDB.getTemplateByMapId(templateMap).map { templates =>
         if (templates.length equals 0) {
           Logger.error("No template found: " + templateMap.toString)
           throw new Exception("No template found: " + templateMap.toString)
@@ -151,7 +151,7 @@ object TemplateChecker {
 
   case class ScheduledCheck()
 
-  def props(config: Config, emailTemplateRepository: NotificationTemplateRepository, templateBackgroundService: TemplateBackgroundService): Props =
+  def props(config: Config, emailTemplateRepository: FusionDatabase, templateBackgroundService: TemplateBackgroundService): Props =
     Props(new TemplateChecker(config, emailTemplateRepository, templateBackgroundService))
 
   case class CompilationError(message: String, line: Int, column: Int) extends RuntimeException(message)

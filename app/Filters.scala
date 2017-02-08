@@ -1,3 +1,5 @@
+package me.mig.mars
+
 import javax.inject._
 
 import me.mig.mars.filters.LoggingFilter

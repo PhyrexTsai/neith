@@ -3,7 +3,7 @@ package me.mig.mars.services
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import me.mig.mars.models.NotificationTemplateRepository
+import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.workers.TemplateChecker
 import me.mig.mars.workers.TemplateChecker.CompiledTemplate
 import play.api.Configuration
@@ -17,7 +17,7 @@ import scala.concurrent.Future
   */
 
 @Singleton
-class TemplateBackgroundService @Inject()(system: ActorSystem, configuration: Configuration, appLifecycle: ApplicationLifecycle, emailTemplateRepo: NotificationTemplateRepository) {
+class TemplateBackgroundService @Inject()(system: ActorSystem, configuration: Configuration, appLifecycle: ApplicationLifecycle, fusionDB: FusionDatabase) {
   import TemplateChecker._
   import system.dispatcher
 
@@ -28,7 +28,7 @@ class TemplateBackgroundService @Inject()(system: ActorSystem, configuration: Co
 
   // Dynamically build templates @runtime
   // Start scheduler to check email templates if need to rebuild every 5 mins.
-  val cancelable = system.scheduler.schedule(0 seconds, 300 seconds, system.actorOf(TemplateChecker.props(templateConfig, emailTemplateRepo, this)), ScheduledCheck)
+  val cancelable = system.scheduler.schedule(0 seconds, 300 seconds, system.actorOf(TemplateChecker.props(templateConfig, fusionDB, this)), ScheduledCheck)
 
   def get[T](className: String): (String, CompiledTemplate) = {
     val compiledTemplate = templates.get(templateClassPrefix + className)
