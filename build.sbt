@@ -104,7 +104,7 @@ lazy val commonSettings = Seq(
   // Disable publishing the scaladoc jar
   sources in (Compile, doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) in ThisBuild := false,
-  
+
   // Docker settings
   dockerCommands := dockerCommands.value.takeWhile {
     case cmd: Cmd => !cmd.cmd.equals("USER")
