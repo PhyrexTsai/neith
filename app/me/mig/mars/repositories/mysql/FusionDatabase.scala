@@ -73,9 +73,15 @@ class FusionDatabase @Inject()(@NamedDatabase("fusion") dbConfigProvider: Databa
   }
   private lazy val iosDeviceTokens = TableQuery[IosDeviceTokens]
 
+  def getGcmRegToken(userId: Int): Future[Seq[GcmRegToken]] = {
+    db.run(
+      gcmRegTokens.filter( _.userId === userId ).result
+    )
+  }
+
   def updateGcmRegToken(userId: Int, originalToken: String, newToken: String) = {
     db.run(
-      gcmRegTokens.filter( _.token === originalToken)
+      gcmRegTokens.filter( _.token === originalToken )
         .map(gToken => (gToken.token, gToken.dateLastUsed))
         .update( (newToken, new Timestamp(System.currentTimeMillis)) )
     )
@@ -83,7 +89,7 @@ class FusionDatabase @Inject()(@NamedDatabase("fusion") dbConfigProvider: Databa
 
   def getIosDeviceToken(userId: Int): Future[Seq[IosDeviceToken]] = {
     db.run(
-      iosDeviceTokens.filter ( _.userId === userId).result
+      iosDeviceTokens.filter( _.userId === userId ).result
     )
   }
   def updateIosDeviceToken(userId: Int, originalToken: Array[Byte], newToken: Array[Byte]) = {
