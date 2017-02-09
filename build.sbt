@@ -29,6 +29,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick" % "2.0.2",
   "com.lightbend.akka" %% "akka-stream-alpakka-cassandra" % "0.3",
   "com.github.etaty" %% "rediscala" % "1.7.0",
+  "org.apache.hive" % "hive-jdbc" % "1.2.1"
   // Amazon SNS SDK
   "com.amazonaws" % "aws-java-sdk" % "1.11.46",
   // Logging
@@ -93,7 +94,7 @@ lazy val appSecret = Option(System.getProperty("appsecret")).getOrElse("J@O6CmRZ
 lazy val commonSettings = Seq(
   rpmVendor := "migme",
   rpmLicense := Some("migme"),
-  version in Rpm := "0.0.7",
+  version in Rpm := version.value.split("-")(0),
   packageDescription in Rpm := "Notificatoin service of Migme.",
 
   organization := "me.mig.mars",
