@@ -18,7 +18,7 @@ class HiveClient @Inject()(configuration: Configuration) {
 
   var isExist: Boolean = false
 
-  if (config.getString("jdbcUrl") != null) {
+  if (config.getString("jdbcUrl") != null && config.getString("jdbcUrl") != "") {
     Class.forName(config.getString("driver"))
     conn = DriverManager.getConnection(config.getString("jdbcUrl"), config.getString("user"), config.getString("password"))
     isExist = true
