@@ -29,7 +29,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick" % "2.0.2",
   "com.lightbend.akka" %% "akka-stream-alpakka-cassandra" % "0.3",
   "com.github.etaty" %% "rediscala" % "1.7.0",
-  "org.apache.hive" % "hive-jdbc" % "1.2.1",
+  "org.apache.hive" % "hive-jdbc" % "0.13.1",
   // Amazon SNS SDK
   "com.amazonaws" % "aws-java-sdk" % "1.11.46",
   // Logging
