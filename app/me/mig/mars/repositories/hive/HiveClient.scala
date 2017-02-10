@@ -3,7 +3,7 @@ package me.mig.mars.repositories.hive
 import java.sql.{Connection, DriverManager, PreparedStatement}
 import javax.inject.Inject
 
-import play.api.Configuration
+import play.api.{Configuration, Logger}
 
 import scala.collection.mutable
 import scala.collection.JavaConverters._
@@ -26,8 +26,10 @@ class HiveClient @Inject()(configuration: Configuration) {
 
   def getScheduledJobUsers(labels: List[Short], countries: List[Int]) = {
     val stmt: PreparedStatement = conn.prepareStatement(SELECT_SCHEDULED_JOB_USERS)
+    Logger.debug("stmt: " + stmt.toString)
     val countryArray: java.sql.Array = conn.createArrayOf("INTEGER", countries.asJava.toArray)
     val labelArray: java.sql.Array = conn.createArrayOf("SMALLINT", labels.asJava.toArray)
+    Logger.debug("countryArray: " + countryArray)
     stmt.setArray(0, countryArray)
     stmt.setArray(1, labelArray)
     val res = stmt.executeQuery()
@@ -35,6 +37,7 @@ class HiveClient @Inject()(configuration: Configuration) {
     while (res.next()) {
       resultList :+ (res.getInt(0), res.getString(1), res.getString(2), res.getInt(3))
     }
+    Logger.debug("resultList: " + resultList)
     resultList.toList
   }
 }
