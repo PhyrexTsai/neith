@@ -1,11 +1,9 @@
 package me.mig.neith.filters
 
-//import java.util.zip.GZIPInputStream
 import javax.inject.Inject
 
 import akka.stream.Materializer
 import akka.util.ByteString
-//import org.apache.commons.io.IOUtils
 import play.api.Logger
 import play.api.mvc._
 
