@@ -85,7 +85,9 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
         ((Math.ceil((System.currentTimeMillis() - job.startTime.getTime) / interval) + 1) * interval).toLong
       else
         interval
+    Logger.debug("Start to add RunningJob: " + job.id + " with delay: " + delay)
 
+    Logger.debug("Finite delay: " + FiniteDuration(job.startTime.getTime + delay - System.currentTimeMillis(), MILLISECONDS))
     JobScheduleService.addRunningJob(job.id,
       system.scheduler.scheduleOnce(
         FiniteDuration(job.startTime.getTime + delay - System.currentTimeMillis(), MILLISECONDS),  // The next start time
@@ -93,6 +95,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
         DispatchJob(job.id)
       )
     )
+    Logger.debug("Start setNextJob")
     keyspace.setNextJob(job.id, delay)
       .recover {
         case ex: Throwable =>
