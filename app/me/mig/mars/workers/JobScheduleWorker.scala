@@ -11,19 +11,17 @@ import me.mig.mars.event.MarsCommand.RenewGcmToken
 import me.mig.mars.models.JobModel.{DispatchJob, Job, PushJob}
 import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
-import me.mig.mars.repositories.hive.HiveClient
 import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.services.JobScheduleService
 import play.api.{Configuration, Logger}
 
-import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
 /**
   * Created by jameshsiao on 11/22/16.
   */
-class JobScheduleWorker @Inject()(configuration: Configuration, implicit val system: ActorSystem, implicit val materializer: Materializer, implicit val db: FusionDatabase, implicit val keyspace: MarsKeyspace, @Named("PushNotificationKafkaProducer") pushNotificationKafkaProducer: ActorRef, hiveClient: HiveClient) extends Actor {
+class JobScheduleWorker @Inject()(configuration: Configuration, implicit val system: ActorSystem, implicit val materializer: Materializer, implicit val db: FusionDatabase, implicit val keyspace: MarsKeyspace, @Named("PushNotificationKafkaProducer") pushNotificationKafkaProducer: ActorRef) extends Actor {
   private final val ONE_DAY: Long = 86400000
 
   implicit val executeContext = materializer.executionContext
@@ -105,34 +103,34 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
     // TODO: Support more types
     NotificationType.withName(job.notificationType) match {
       case NotificationType.PUSH =>
-        if (hiveClient.isExist) {
-          val tokens = mutable.ListBuffer[PushJob]()
-          Future.successful {
-            hiveClient.getScheduledJobUsers(job.label, job.country).map(user =>
-              for {
-                gcmTokens <- db.getGcmRegToken(user._1)
-                iosTokens <- db.getIosDeviceToken(user._1)
-              } yield {
-                for {
-                  gcmToken <- gcmTokens
-                  iosToken <- iosTokens
-                } yield {
-                  tokens :+ PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
-                    if (gcmToken != null) Some(gcmToken.token) else None,
-                    if (iosToken != null) Some(iosToken.deviceToken) else None
-                  )
-                }
-              }
-            )
-            tokens.toList
-          }
-        } else {
+//        if (hiveClient.isExist) {
+//          val tokens = mutable.ListBuffer[PushJob]()
+//          Future.successful {
+//            hiveClient.getScheduledJobUsers(job.label, job.country).map(user =>
+//              for {
+//                gcmTokens <- db.getGcmRegToken(user._1)
+//                iosTokens <- db.getIosDeviceToken(user._1)
+//              } yield {
+//                for {
+//                  gcmToken <- gcmTokens
+//                  iosToken <- iosTokens
+//                } yield {
+//                  tokens :+ PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
+//                    if (gcmToken != null) Some(gcmToken.token) else None,
+//                    if (iosToken != null) Some(iosToken.deviceToken) else None
+//                  )
+//                }
+//              }
+//            )
+//            tokens.toList
+//          }
+//        } else {
           db.getUserTokensByLabelAndCountry(job.label, job.country).map(
             tokens => {
               tokens.toList.map(token => PushJob(job.id, token._1, job.message, Some(job.callToAction), token._2, token._3, token._4))
             }
           )
-        }
+//        }
       case NotificationType.POPUP =>
         Logger.info("Coming soon...")
         Future.successful(List.empty[PushJob])
