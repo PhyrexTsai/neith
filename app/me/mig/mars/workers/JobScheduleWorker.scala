@@ -71,6 +71,9 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
             pushNotificationKafkaProducer ! pushJob
           }
         ).runWith(Sink.ignore)
+        .recover {
+          case ex => Logger.error("Dispatching job encounters error: " + ex.getMessage)
+        }
 
     case x =>
       Logger.warn("Unsupported message to dispatch: " + x)
@@ -80,9 +83,12 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
     Logger.debug("scheduleNextJob: " + job)
     // Need to update the next startTime for service restarting to dispatch the new scheduler.
     val interval = job.interval.getOrElse(ONE_DAY) // Default is one day if not set
+    Logger.debug("interval: " + interval)
     val delay: Long =
-      if (job.startTime.getTime < System.currentTimeMillis())
+      if (job.startTime.getTime < System.currentTimeMillis()) {
+        Logger.debug("start time is before now")
         ((Math.ceil((System.currentTimeMillis() - job.startTime.getTime) / interval) + 1) * interval).toLong
+      }
       else
         interval
     Logger.debug("Start to add RunningJob: " + job.id + " with delay: " + delay)
