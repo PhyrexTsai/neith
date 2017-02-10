@@ -11,7 +11,6 @@ import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Failure, Success, Try}
 
 /**
   * Created by phyrextsai on 2017/1/19.
@@ -30,7 +29,6 @@ class ImageService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionC
     imageFile.file("file")
       .filter(_.ref.file.length() > 0)
       .map(file => {
-        println("length: " + file.ref.file.length())
         val byteArray = Files.readAllBytes(Paths.get(file.ref.file.getPath))
         val result = bucket + BucketFile(file.filename, file.contentType.get, byteArray)
         result map { unit =>
