@@ -106,9 +106,11 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
     NotificationType.withName(job.notificationType) match {
       case NotificationType.PUSH =>
         if (hiveClient.isExist) {
+          Logger.debug("Use Hive to query")
           val tokens = mutable.ListBuffer[PushJob]()
           Future.successful {
-            hiveClient.getScheduledJobUsers(job.label, job.country).map(user =>
+            hiveClient.getScheduledJobUsers(job.label, job.country).map { user =>
+              Logger.debug("user to push: " + user)
               for {
                 gcmTokens <- db.getGcmRegToken(user._1)
                 iosTokens <- db.getIosDeviceToken(user._1)
@@ -123,10 +125,12 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
                   )
                 }
               }
-            )
+            }
+
             tokens.toList
           }
         } else {
+          Logger.debug("Use mysql to query")
           db.getUserTokensByLabelAndCountry(job.label, job.country).map(
             tokens => {
               tokens.toList.map(token => PushJob(job.id, token._1, job.message, Some(job.callToAction), token._2, token._3, token._4))
