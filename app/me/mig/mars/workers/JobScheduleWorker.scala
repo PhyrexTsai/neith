@@ -82,7 +82,9 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
   private def scheduleNextJob(job: Job): Future[String] = {
     Logger.debug("scheduleNextJob: " + job)
     // Need to update the next startTime for service restarting to dispatch the new scheduler.
-    val interval = job.interval.getOrElse(ONE_DAY) // Default is one day if not set
+    var interval = job.interval.getOrElse(ONE_DAY) // Default is one day if not set
+    // To make sure the interval is not 0
+    if (interval == 0) interval = ONE_DAY
     Logger.debug("interval: " + interval)
     val delay: Long =
       if (job.startTime.getTime < System.currentTimeMillis()) {
