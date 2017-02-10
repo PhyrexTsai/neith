@@ -103,6 +103,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
 
   private def dispatchJob(job: Job): Future[List[PushJob]] = {
     // TODO: Support more types
+    Logger.debug("dispatchJob enter")
     NotificationType.withName(job.notificationType) match {
       case NotificationType.PUSH =>
         if (hiveClient.isExist) {
