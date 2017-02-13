@@ -24,7 +24,7 @@ class HiveClient @Inject()(configuration: Configuration) {
   }
 
   def getScheduledJobUsers(labels: List[Short], countries: List[Int]) = {
-    val preparedSql = SELECT_SCHEDULED_JOB_USERS.replaceFirst("?", countries.mkString(",")).replace("?", labels.mkString(","))
+    val preparedSql = SELECT_SCHEDULED_JOB_USERS.replaceFirst("\\?", countries.mkString(",")).replace("?", labels.mkString(","))
     Logger.debug("preparedSql: " + preparedSql)
     val stmt: PreparedStatement = conn.prepareStatement(preparedSql)
     try {
