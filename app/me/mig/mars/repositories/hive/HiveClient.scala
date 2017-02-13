@@ -6,13 +6,12 @@ import javax.inject.Inject
 import play.api.{Configuration, Logger}
 
 import scala.collection.mutable
-import scala.collection.JavaConverters._
 
 /**
   * Created by jameshsiao on 2/8/17.
   */
 class HiveClient @Inject()(configuration: Configuration) {
-  private final val SELECT_SCHEDULED_JOB_USERS = "select a.id userid, b.type, a.username, a.countryid from dm.dim_user a join ds.fct_user_label b on a.countryid in ? and b.type in ? and a.id = b.userid"
+  private final val SELECT_SCHEDULED_JOB_USERS = "select a.id userid, b.type, a.username, a.countryid from dm.dim_user a join ds.fct_user_label b on a.countryid in (?) and b.type in (?) and a.id = b.userid"
   private val config = configuration.underlying.getConfig("hive")
   private var conn: Connection = null
 
@@ -25,20 +24,21 @@ class HiveClient @Inject()(configuration: Configuration) {
   }
 
   def getScheduledJobUsers(labels: List[Short], countries: List[Int]) = {
-    val stmt: PreparedStatement = conn.prepareStatement(SELECT_SCHEDULED_JOB_USERS)
-    Logger.debug("stmt: " + stmt)
+    val preparedSql = SELECT_SCHEDULED_JOB_USERS.replaceFirst("?", countries.mkString(",")).replace("?", labels.mkString(","))
+    Logger.debug("preparedSql: " + preparedSql)
+    val stmt: PreparedStatement = conn.prepareStatement(preparedSql)
     try {
-      val countryArray: java.sql.Array = conn.createArrayOf("INTEGER", countries.asJava.toArray)
-      for (ct <- countries.asJava.toArray) {
-        Logger.debug("countries to sql array[]: " + ct)
-      }
-      val labelArray: java.sql.Array = conn.createArrayOf("TINYINT", labels.asJava.toArray)
-      for (lb <- labels.asJava.toArray) {
-        Logger.debug("labels to sql array[]: " + lb)
-      }
-      Logger.debug("countryArray: " + countryArray)
-      stmt.setArray(1, countryArray)
-      stmt.setArray(2, labelArray)
+//      val countryArray: java.sql.Array = conn.createArrayOf("INTEGER", countries.asJava.toArray)
+//      for (ct <- countries.asJava.toArray) {
+//        Logger.debug("countries to sql array[]: " + ct)
+//      }
+//      val labelArray: java.sql.Array = conn.createArrayOf("TINYINT", labels.asJava.toArray)
+//      for (lb <- labels.asJava.toArray) {
+//        Logger.debug("labels to sql array[]: " + lb)
+//      }
+//      Logger.debug("countryArray: " + countryArray)
+//      stmt.setArray(1, countryArray)
+//      stmt.setArray(2, labelArray)
       val res = stmt.executeQuery()
       val resultList = mutable.ListBuffer[(Int, String, String, Int)]()
       while (res.next()) {
