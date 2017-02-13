@@ -42,7 +42,7 @@ class HiveClient @Inject()(configuration: Configuration) {
       val res = stmt.executeQuery()
       val resultList = mutable.ListBuffer[(Int, String, String, Int)]()
       while (res.next()) {
-        resultList :+ (res.getInt(0), res.getString(1), res.getString(2), res.getInt(3))
+        resultList :+ (res.getInt(1), res.getString(2), res.getString(3), res.getInt(4))
       }
       Logger.debug("resultList: " + resultList)
       resultList.toList
