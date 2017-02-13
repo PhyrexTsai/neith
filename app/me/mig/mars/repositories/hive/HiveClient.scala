@@ -13,17 +13,12 @@ import scala.collection.mutable
 class HiveClient @Inject()(configuration: Configuration) {
   private final val SELECT_SCHEDULED_JOB_USERS = "select a.id userid, b.type, a.username, a.countryid from dm.dim_user a join ds.fct_user_label b on a.countryid in (?) and b.type in (?) and a.id = b.userid"
   private val config = configuration.underlying.getConfig("hive")
-  private var conn: Connection = null
 
-  var isExist: Boolean = false
-
-  if (config.getString("jdbcUrl") != null && config.getString("jdbcUrl") != "") {
-    isExist = true
-  }
+  val isExist: Boolean = config.getString("jdbcUrl") != null && config.getString("jdbcUrl") != ""
 
   def getScheduledJobUsers(labels: List[Short], countries: List[Int]) = {
     Class.forName(config.getString("driver"))
-    conn = DriverManager.getConnection(config.getString("jdbcUrl"), config.getString("user"), config.getString("password"))
+    val conn = DriverManager.getConnection(config.getString("jdbcUrl"), config.getString("user"), config.getString("password"))
     val preparedSql = SELECT_SCHEDULED_JOB_USERS.replaceFirst("\\?", countries.mkString(",")).replace("?", labels.mkString(","))
     Logger.debug("preparedSql: " + preparedSql)
     val stmt: PreparedStatement = conn.prepareStatement(preparedSql)
