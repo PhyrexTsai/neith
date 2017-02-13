@@ -52,6 +52,8 @@ class HiveClient @Inject()(configuration: Configuration) {
         Logger.error("Query hive encounters error: " + ex.getMessage)
         Logger.error("Exception: " + ex.printStackTrace())
         List()
+    } finally {
+      conn.close()
     }
   }
 }
