@@ -11,6 +11,7 @@ import scala.collection.mutable
   * Created by jameshsiao on 2/8/17.
   */
 class HiveClient @Inject()(configuration: Configuration) {
+  private final val MAX_FETCH_SIZE = 10000
   private final val SELECT_SCHEDULED_JOB_USERS = "select a.id userid, b.type, a.username, a.countryid from dm.dim_user a join ds.fct_user_label b on a.countryid in (?) and b.type in (?) and a.id = b.userid"
   private val config = configuration.underlying.getConfig("hive")
 
@@ -34,8 +35,9 @@ class HiveClient @Inject()(configuration: Configuration) {
 //      Logger.debug("countryArray: " + countryArray)
 //      stmt.setArray(1, countryArray)
 //      stmt.setArray(2, labelArray)
+      stmt.setFetchSize(MAX_FETCH_SIZE)
       val res = stmt.executeQuery()
-      val resultList = mutable.ListBuffer[(Int, String, String, Int)]()
+      var resultList = mutable.ListBuffer[(Int, String, String, Int)]()
       while (res.next()) {
         resultList :+ (res.getInt(1), res.getString(2), res.getString(3), res.getInt(4))
       }
