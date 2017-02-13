@@ -40,7 +40,7 @@ class HiveClient @Inject()(configuration: Configuration) {
       var resultList = mutable.ListBuffer[(Int, String, String, Int)]()
       while (res.next()) {
         Logger.debug( "res: " + (res.getInt(1), res.getString(2), res.getString(3), res.getInt(4)) )
-        resultList :+ (res.getInt(1), res.getString(2), res.getString(3), res.getInt(4))
+        resultList += ( (res.getInt(1), res.getString(2), res.getString(3), res.getInt(4)) )
       }
       for (res <- resultList) {
         Logger.debug("item of resultList: " + res)
