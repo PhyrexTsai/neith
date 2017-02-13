@@ -16,7 +16,6 @@ import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.services.JobScheduleService
 import play.api.{Configuration, Logger}
 
-import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -118,7 +117,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
       case NotificationType.PUSH =>
         if (hiveClient.isExist) {
           Logger.debug("Use Hive to query")
-          var tokens = mutable.ListBuffer[PushJob]()
+          var tokens = List[PushJob]()
           Future.successful {
             hiveClient.getScheduledJobUsers(job.label, job.country).map { user =>
               Logger.debug("user to push: " + user)
@@ -126,20 +125,20 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
                 gcmTokens <- db.getGcmRegToken(user._1)
                 iosTokens <- db.getIosDeviceToken(user._1)
               } yield {
-                for {
-                  gcmToken <- gcmTokens
-                  iosToken <- iosTokens
-                } yield {
-                  tokens += PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
-                    if (gcmToken != null) Some(gcmToken.token) else None,
-                    if (iosToken != null) Some(iosToken.deviceToken) else None
-                  )
-                }
+                Logger.debug("gcmTokens: " + gcmTokens)
+                Logger.debug("iosTokens: " + iosTokens)
+                tokens = (gcmTokens zip iosTokens).map {
+                  case (gcmToken, iosToken) =>
+                    PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
+                      if (gcmToken != null) Some(gcmToken.token) else None,
+                      if (iosToken != null) Some(iosToken.deviceToken) else None
+                    )
+                }.toList
               }
             }
 
             Logger.debug("tokens: " + tokens)
-            tokens.toList
+            tokens
           }
         } else {
           Logger.debug("Use mysql to query")
