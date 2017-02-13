@@ -26,18 +26,27 @@ class HiveClient @Inject()(configuration: Configuration) {
 
   def getScheduledJobUsers(labels: List[Short], countries: List[Int]) = {
     val stmt: PreparedStatement = conn.prepareStatement(SELECT_SCHEDULED_JOB_USERS)
-    Logger.debug("stmt: " + stmt.toString)
-    val countryArray: java.sql.Array = conn.createArrayOf("INTEGER", countries.asJava.toArray)
-    val labelArray: java.sql.Array = conn.createArrayOf("SMALLINT", labels.asJava.toArray)
-    Logger.debug("countryArray: " + countryArray)
-    stmt.setArray(0, countryArray)
-    stmt.setArray(1, labelArray)
-    val res = stmt.executeQuery()
-    val resultList = mutable.ListBuffer[(Int, String, String, Int)]()
-    while (res.next()) {
-      resultList :+ (res.getInt(0), res.getString(1), res.getString(2), res.getInt(3))
+    Logger.debug("stmt: " + stmt)
+    try {
+      Logger.debug("countries to sql array: " + countries.asJava.toArray)
+      Logger.debug("labels to sql array: " + labels.asJava.toArray)
+      val countryArray: java.sql.Array = conn.createArrayOf("INTEGER", countries.asJava.toArray)
+      val labelArray: java.sql.Array = conn.createArrayOf("SMALLINT", labels.asJava.toArray)
+      Logger.debug("countryArray: " + countryArray)
+      stmt.setArray(0, countryArray)
+      stmt.setArray(1, labelArray)
+      val res = stmt.executeQuery()
+      val resultList = mutable.ListBuffer[(Int, String, String, Int)]()
+      while (res.next()) {
+        resultList :+ (res.getInt(0), res.getString(1), res.getString(2), res.getInt(3))
+      }
+      Logger.debug("resultList: " + resultList)
+      resultList.toList
+    } catch {
+      case ex =>
+        Logger.error("Query hive encounters error: " + ex.getMessage)
+        Logger.error("Stack trace: " + ex.getStackTrace)
+        List()
     }
-    Logger.debug("resultList: " + resultList)
-    resultList.toList
   }
 }
