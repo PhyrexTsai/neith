@@ -130,7 +130,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
                   gcmToken <- gcmTokens
                   iosToken <- iosTokens
                 } yield {
-                  tokens :+ PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
+                  tokens += PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
                     if (gcmToken != null) Some(gcmToken.token) else None,
                     if (iosToken != null) Some(iosToken.deviceToken) else None
                   )
@@ -138,6 +138,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
               }
             }
 
+            Logger.debug("tokens: " + tokens)
             tokens.toList
           }
         } else {
