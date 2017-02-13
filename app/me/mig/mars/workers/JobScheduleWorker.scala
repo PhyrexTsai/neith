@@ -118,7 +118,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
       case NotificationType.PUSH =>
         if (hiveClient.isExist) {
           Logger.debug("Use Hive to query")
-          val tokens = mutable.ListBuffer[PushJob]()
+          var tokens = mutable.ListBuffer[PushJob]()
           Future.successful {
             hiveClient.getScheduledJobUsers(job.label, job.country).map { user =>
               Logger.debug("user to push: " + user)
