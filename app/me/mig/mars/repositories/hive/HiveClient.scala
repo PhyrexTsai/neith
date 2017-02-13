@@ -1,6 +1,6 @@
 package me.mig.mars.repositories.hive
 
-import java.sql.{Connection, DriverManager, PreparedStatement}
+import java.sql._
 import javax.inject.Inject
 
 import play.api.{Configuration, Logger}
@@ -28,14 +28,14 @@ class HiveClient @Inject()(configuration: Configuration) {
     val stmt: PreparedStatement = conn.prepareStatement(SELECT_SCHEDULED_JOB_USERS)
     Logger.debug("stmt: " + stmt)
     try {
+      val countryArray: java.sql.Array = conn.createArrayOf("INTEGER", countries.asJava.toArray)
       for (ct <- countries.asJava.toArray) {
         Logger.debug("countries to sql array[]: " + ct)
       }
+      val labelArray: java.sql.Array = conn.createArrayOf("TINYINT", labels.asJava.toArray)
       for (lb <- labels.asJava.toArray) {
         Logger.debug("labels to sql array[]: " + lb)
       }
-      val countryArray: java.sql.Array = conn.createArrayOf("INTEGER", countries.asJava.toArray)
-      val labelArray: java.sql.Array = conn.createArrayOf("SMALLINT", labels.asJava.toArray)
       Logger.debug("countryArray: " + countryArray)
       stmt.setArray(1, countryArray)
       stmt.setArray(2, labelArray)
@@ -47,6 +47,12 @@ class HiveClient @Inject()(configuration: Configuration) {
       Logger.debug("resultList: " + resultList)
       resultList.toList
     } catch {
+      case ex: SQLException =>
+        Logger.error("SQLException: " + ex.getMessage)
+        List()
+      case ex: SQLFeatureNotSupportedException =>
+        Logger.error("SQLFeatureNotSupportedException: " + ex.getMessage)
+        List()
       case ex: Throwable =>
         Logger.error("Query hive encounters error: " + ex.getMessage)
         Logger.error("Exception: " + ex.printStackTrace())
