@@ -39,9 +39,12 @@ class HiveClient @Inject()(configuration: Configuration) {
       val res = stmt.executeQuery()
       var resultList = mutable.ListBuffer[(Int, String, String, Int)]()
       while (res.next()) {
+        Logger.debug( "res: " + (res.getInt(1), res.getString(2), res.getString(3), res.getInt(4)) )
         resultList :+ (res.getInt(1), res.getString(2), res.getString(3), res.getInt(4))
       }
-      Logger.debug("resultList: " + resultList)
+      for (res <- resultList) {
+        Logger.debug("item of resultList: " + res)
+      }
       resultList.toList
     } catch {
       case ex: SQLException =>
