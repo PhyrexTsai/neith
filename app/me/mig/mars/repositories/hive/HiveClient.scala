@@ -28,13 +28,17 @@ class HiveClient @Inject()(configuration: Configuration) {
     val stmt: PreparedStatement = conn.prepareStatement(SELECT_SCHEDULED_JOB_USERS)
     Logger.debug("stmt: " + stmt)
     try {
-      Logger.debug("countries to sql array: " + countries.asJava.toArray)
-      Logger.debug("labels to sql array: " + labels.asJava.toArray)
+      for (ct <- countries.asJava.toArray) {
+        Logger.debug("countries to sql array[]: " + ct)
+      }
+      for (lb <- labels.asJava.toArray) {
+        Logger.debug("labels to sql array[]: " + lb)
+      }
       val countryArray: java.sql.Array = conn.createArrayOf("INTEGER", countries.asJava.toArray)
       val labelArray: java.sql.Array = conn.createArrayOf("SMALLINT", labels.asJava.toArray)
       Logger.debug("countryArray: " + countryArray)
-      stmt.setArray(0, countryArray)
-      stmt.setArray(1, labelArray)
+      stmt.setArray(1, countryArray)
+      stmt.setArray(2, labelArray)
       val res = stmt.executeQuery()
       val resultList = mutable.ListBuffer[(Int, String, String, Int)]()
       while (res.next()) {
@@ -43,9 +47,9 @@ class HiveClient @Inject()(configuration: Configuration) {
       Logger.debug("resultList: " + resultList)
       resultList.toList
     } catch {
-      case ex =>
+      case ex: Throwable =>
         Logger.error("Query hive encounters error: " + ex.getMessage)
-        Logger.error("Stack trace: " + ex.getStackTrace)
+        Logger.error("Exception: " + ex.printStackTrace())
         List()
     }
   }
