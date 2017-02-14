@@ -65,6 +65,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
           }
         }
         .map(pushJobs => Source(pushJobs).map { pushJob =>
+            Logger.debug("pushJobs: " + pushJobs)
             Logger.info("job with tokens: " + pushJob)
             // Publishing to job queue(Kafka) ready for consuming.
             pushNotificationKafkaProducer ! pushJob
