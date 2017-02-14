@@ -136,7 +136,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
               Logger.debug("userTokens(" + user._1 + "): " + userTokens.toString())
               userTokens
             }
-          }.fold(Seq[PushJob]())(_ ++ _).runWith(Sink.head).recover {
+          }.runFold(Seq[PushJob]())(_ ++ _).recover {
             case ex: Throwable =>
               Logger.error("Getting user tokens encounters error: " + ex.getMessage)
               Seq()
