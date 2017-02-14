@@ -28,8 +28,9 @@ class PushNotificationKafkaConsumer @Inject()(configuration: Configuration, syst
     .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
   def launch(topic: String) = {
-    Logger.info("Consumer launching topic: " + topic)
-    Consumer.committableSource(consumerSettings, Subscriptions.topics(topic))
+    // Replace all spaces into underscore because Kafka seems not allow space in topic name.
+    Logger.info("Consumer launching topic: " + topic.replaceAll(" ", "_"))
+    Consumer.committableSource(consumerSettings, Subscriptions.topics(topic.replaceAll(" ", "_")))
       .map { msg =>
         Logger.debug("committableOffset: " + msg.committableOffset)
         Logger.debug("Reading data: " + msg.record.value())

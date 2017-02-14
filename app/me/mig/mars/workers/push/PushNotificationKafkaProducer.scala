@@ -25,7 +25,8 @@ class PushNotificationKafkaProducer @Inject()(configuration: Configuration, syst
   override def receive: Receive = {
     case pushJob: PushJob =>
       Source.single(pushJob)
-        .map( job => new ProducerRecord[Array[Byte], String](job.jobId, Json.toJson[PushJob](job).toString) )
+        // Replace all spaces into underscore because Kafka seems not allow space in topic name.
+        .map( job => new ProducerRecord[Array[Byte], String](job.jobId.replaceAll(" ", "_"), Json.toJson[PushJob](job).toString) )
         .runWith(Producer.plainSink(producerSettings))
         .recover {
           case x: Throwable => Logger.error("Produce kafka error: " + x.getMessage)
