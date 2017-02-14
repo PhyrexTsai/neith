@@ -64,13 +64,13 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
             }
           }
         }
-        .map(pushJobs => pushJobs.map { pushJob =>
-            Logger.debug("pushJobs: " + pushJobs)
-            Logger.info("job with tokens: " + pushJob)
-            // Publishing to job queue(Kafka) ready for consuming.
-            pushNotificationKafkaProducer ! pushJob
-          }
-        ).runWith(Sink.ignore)
+        .mapConcat(_.toList)
+        .map { pushJob =>
+          Logger.debug("pushJobs: " + pushJob)
+          Logger.info("job with tokens: " + pushJob)
+          // Publishing to job queue(Kafka) ready for consuming.
+          pushNotificationKafkaProducer ! pushJob
+        }.runWith(Sink.ignore)
         .recover {
           case ex => Logger.error("Dispatching job encounters error: " + ex.getMessage)
         }
@@ -111,14 +111,14 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
       }
   }
 
-  private def dispatchJob(job: Job): Future[List[PushJob]] = {
+  private def dispatchJob(job: Job): Future[Seq[PushJob]] = {
     // TODO: Support more types
     Logger.debug("dispatchJob enter")
     NotificationType.withName(job.notificationType) match {
       case NotificationType.PUSH =>
         if (hiveClient.isExist) {
           Logger.debug("Use Hive to query")
-          Source(hiveClient.getScheduledJobUsers(job.label, job.country)).mapAsync(2) { user =>
+          Source(hiveClient.getScheduledJobUsers(job.label, job.country)).mapAsync(10) { user =>
             Logger.debug("user to push: " + user)
             for {
               gcmTokens <- db.getGcmRegToken(user._1)
@@ -126,49 +126,26 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
             } yield {
               Logger.debug("gcmTokens: " + gcmTokens)
               Logger.debug("iosTokens: " + iosTokens)
-              val userTokens = (gcmTokens zip iosTokens).map {
+              val userTokens: Seq[PushJob] = (gcmTokens zip iosTokens).map {
                 case (gcmToken, iosToken) =>
                   PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
                     if (gcmToken != null) Some(gcmToken.token) else None,
                     if (iosToken != null) Some(iosToken.deviceToken) else None
                   )
-              }.toList
-              Logger.debug("userTokens(" + user._1 + "): " + userTokens)
+              }
+              Logger.debug("userTokens(" + user._1 + "): " + userTokens.toString())
               userTokens
             }
-          }.runWith(Sink.head).recover {
+          }.fold(Seq[PushJob]())(_ ++ _).runWith(Sink.head).recover {
             case ex: Throwable =>
               Logger.error("Getting user tokens encounters error: " + ex.getMessage)
-              List()
+              Seq()
           }
-//          Future.sequence {
-//            val tokens = hiveClient.getScheduledJobUsers(job.label, job.country).map { user =>
-//              Logger.debug("user to push: " + user)
-//              for {
-//                gcmTokens <- db.getGcmRegToken(user._1)
-//                iosTokens <- db.getIosDeviceToken(user._1)
-//              } yield {
-//                Logger.debug("gcmTokens: " + gcmTokens)
-//                Logger.debug("iosTokens: " + iosTokens)
-//                val userTokens = (gcmTokens zip iosTokens).map {
-//                  case (gcmToken, iosToken) =>
-//                    PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
-//                      if (gcmToken != null) Some(gcmToken.token) else None,
-//                      if (iosToken != null) Some(iosToken.deviceToken) else None
-//                    )
-//                }.toList
-//                Logger.debug("userTokens(" + user._1 + "): " + userTokens)
-//                userTokens
-//              }
-//            }
-//            Logger.debug("tokens: " + tokens)
-//            tokens
-//          }.map(_.flatten)
         } else {
           Logger.debug("Use mysql to query")
           db.getUserTokensByLabelAndCountry(job.label, job.country).map(
             tokens => {
-              tokens.toList.map(token => PushJob(job.id, token._1, job.message, Some(job.callToAction), token._2, token._3, token._4))
+              tokens.map(token => PushJob(job.id, token._1, job.message, Some(job.callToAction), token._2, token._3, token._4))
             }
           )
         }

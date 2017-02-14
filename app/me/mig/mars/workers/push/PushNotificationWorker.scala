@@ -218,37 +218,36 @@ object PushNotificationWorker {
       "APNS" -> Json.obj(
         "aps" -> Json.obj(
           "alert" -> Json.obj(
-            /* New version body */
-//            "body" -> message,
-//            "alertAction" -> action
-            /* Old verson body */
-            "_version" -> "2.0",
-            "timestamp" -> System.currentTimeMillis(),
-            "image" -> Json.obj("title " -> ""),  // might be unused
-            "isBatched" -> false,  // might be unused
-            "variables" -> Json.arr(Json.obj("name" -> "author")), // might be unused
-            "id" -> System.currentTimeMillis(),
-            "actions" -> Json.arr(
+            "body" -> message
+          )
+        ),
+        /* Old verson body, will removed after old versions are deprecated */
+        "_version" -> "2.0",
+        "timestamp" -> System.currentTimeMillis(),
+        "image" -> Json.obj("title " -> ""),  // might be unused
+        "isBatched" -> false,  // might be unused
+        "variables" -> Json.arr(Json.obj("name" -> "author")), // might be unused
+        "id" -> System.currentTimeMillis(),
+        "actions" -> Json.arr(
+          Json.obj(
+            "type" -> "URL",  // might be unused
+            "label" -> Json.obj("text" -> "View Now"),  // might be unused
+            "url" -> Json.arr(  // should be flatten ?
               Json.obj(
-                "type" -> "URL",  // might be unused
-                "label" -> Json.obj("text" -> "View Now"),  // might be unused
-                "url" -> Json.arr(  // should be flatten ?
-                  Json.obj(
-                    "view" -> "touch",
-                    "url" -> action
-                  )
-                )
+                "view" -> "touch",
+                "url" -> action
               )
-            ),
-            "message" -> message,
-            "title" -> "You've been migged!",
-            "type" -> "SYS_ALERT",  // might be unused
-            "user" -> Json.obj(
-              "username" -> username,
-              "id" -> userId
             )
           )
-        )
+        ),
+        "title" -> "You've been migged!",
+        "type" -> "SYS_ALERT",  // might be unused
+        "user" -> Json.obj(
+          "username" -> username,
+          "id" -> userId
+        ),
+        /* New version body */
+        "alertAction" -> action
       ).toString()
     ).toString()
   }
