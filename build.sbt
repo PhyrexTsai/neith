@@ -72,7 +72,13 @@ publishTo := {
 }
 
 // releaseSettings
-//releaseVersionBump := sbtrelease.Version.Bump.Minor
+releaseVersionBump := {
+  sys.props.getOrElse("release.version.bump", default = "bugfix") match {
+    case "major" => sbtrelease.Version.Bump.Major
+    case "minor" => sbtrelease.Version.Bump.Minor
+    case _ => sbtrelease.Version.Bump.Bugfix
+  }
+}
 releaseProcess := Seq[ReleaseStep](
   checkSnapshotDependencies,
   inquireVersions,
