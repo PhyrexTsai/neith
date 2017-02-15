@@ -140,7 +140,7 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
         }
         if (pushJob.iosToken.nonEmpty) {
           val apnsEndpoint = registerWithSns(Hex.encodeHexString(pushJob.iosToken.get), apnsApplicationArn.get)
-          publish(toApnsMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message), apnsEndpoint)
+          publish(toApnsMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message, pushJob.userId, pushJob.username.getOrElse("")), apnsEndpoint)
         }
       }
       catch {
@@ -213,15 +213,41 @@ object PushNotificationWorker {
     ).toString()
   }
 
-  def toApnsMessage(action: String, message: String): String = {
+  def toApnsMessage(action: String, message: String, userId: Int, username : String): String = {
     Json.obj(
       "APNS" -> Json.obj(
         "aps" -> Json.obj(
           "alert" -> Json.obj(
-            "body" -> message,
-            "alertAction" -> action
+            "body" -> message
           )
-        )
+        ),
+        /* Old verson body, will removed after old versions are deprecated */
+        "_version" -> "2.0",
+        "timestamp" -> System.currentTimeMillis(),
+        "image" -> Json.obj("title " -> ""),  // might be unused
+        "isBatched" -> false,  // might be unused
+        "variables" -> Json.arr(Json.obj("name" -> "author")), // might be unused
+        "id" -> System.currentTimeMillis(),
+        "actions" -> Json.arr(
+          Json.obj(
+            "type" -> "URL",  // might be unused
+            "label" -> Json.obj("text" -> "View Now"),  // might be unused
+            "url" -> Json.arr(  // should be flatten ?
+              Json.obj(
+                "view" -> "touch",
+                "url" -> action
+              )
+            )
+          )
+        ),
+        "title" -> "You've been migged!",
+        "type" -> "SYS_ALERT",  // might be unused
+        "user" -> Json.obj(
+          "username" -> username,
+          "id" -> userId
+        ),
+        /* New version body */
+        "alertAction" -> action
       ).toString()
     ).toString()
   }

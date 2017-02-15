@@ -3,6 +3,7 @@ package me.mig.mars.services
 import javax.inject.{Inject, Named, Singleton}
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
+import akka.cluster.{Cluster, MemberStatus}
 import akka.cluster.singleton.{ClusterSingletonManager, ClusterSingletonManagerSettings}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
@@ -37,6 +38,7 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
     ),
     name = "JobScheduler"
   )
+  Logger.debug("Number of nodes in cluster: " + Cluster(system).state.members.filter(_.status == MemberStatus.Up))
 
   // Loading stored jobs and scheduling to dispatch...
   Logger.info("Starting JobScheduleService to load jobs...")
@@ -48,7 +50,8 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
           if (!job.disabled.getOrElse(false)) {
             Logger.debug("job loaded: " + job.id)
             // Initializing Kafa consumers
-            pushNotificationKafkaConsumer.launch(job.id)
+            // Replace all spaces into underscore because Kafka seems not allow space in topic name.
+            pushNotificationKafkaConsumer.launch(job.id.replaceAll(" ", "_"))
             val delay =
               // If start time is before now, run the job immediately.
               if (job.startTime.getTime < System.currentTimeMillis())

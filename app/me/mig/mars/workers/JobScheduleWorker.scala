@@ -11,6 +11,7 @@ import me.mig.mars.event.MarsCommand.RenewGcmToken
 import me.mig.mars.models.JobModel.{DispatchJob, Job, PushJob}
 import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
+import me.mig.mars.repositories.hive.HiveClient
 import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.services.JobScheduleService
 import play.api.{Configuration, Logger}
@@ -21,7 +22,7 @@ import scala.concurrent.duration._
 /**
   * Created by jameshsiao on 11/22/16.
   */
-class JobScheduleWorker @Inject()(configuration: Configuration, implicit val system: ActorSystem, implicit val materializer: Materializer, implicit val db: FusionDatabase, implicit val keyspace: MarsKeyspace, @Named("PushNotificationKafkaProducer") pushNotificationKafkaProducer: ActorRef) extends Actor {
+class JobScheduleWorker @Inject()(configuration: Configuration, implicit val system: ActorSystem, implicit val materializer: Materializer, implicit val db: FusionDatabase, implicit val keyspace: MarsKeyspace, @Named("PushNotificationKafkaProducer") pushNotificationKafkaProducer: ActorRef, hiveClient: HiveClient) extends Actor {
   private final val ONE_DAY: Long = 86400000
 
   implicit val executeContext = materializer.executionContext
@@ -63,12 +64,16 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
             }
           }
         }
-        .flatMapConcat(pushJobs => Source(pushJobs).map { pushJob =>
-            Logger.info("job with tokens: " + pushJob)
-            // Publishing to job queue(Kafka) ready for consuming.
-            pushNotificationKafkaProducer ! pushJob
-          }
-        ).runWith(Sink.ignore)
+        .mapConcat(_.toList)
+        .map { pushJob =>
+          Logger.debug("pushJobs: " + pushJob)
+          Logger.info("job with tokens: " + pushJob)
+          // Publishing to job queue(Kafka) ready for consuming.
+          pushNotificationKafkaProducer ! pushJob
+        }.runWith(Sink.ignore)
+        .recover {
+          case ex => Logger.error("Dispatching job encounters error: " + ex.getMessage)
+        }
 
     case x =>
       Logger.warn("Unsupported message to dispatch: " + x)
@@ -77,13 +82,19 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
   private def scheduleNextJob(job: Job): Future[String] = {
     Logger.debug("scheduleNextJob: " + job)
     // Need to update the next startTime for service restarting to dispatch the new scheduler.
-    val interval = job.interval.getOrElse(ONE_DAY) // Default is one day if not set
+    val interval = if (job.interval.nonEmpty && job.interval.get > 0) job.interval.get else ONE_DAY // Default is one day if not set
+
+    Logger.debug("interval: " + interval)
     val delay: Long =
-      if (job.startTime.getTime < System.currentTimeMillis())
+      if (job.startTime.getTime < System.currentTimeMillis()) {
+        Logger.debug("start time is before now")
         ((Math.ceil((System.currentTimeMillis() - job.startTime.getTime) / interval) + 1) * interval).toLong
+      }
       else
         interval
+    Logger.debug("Start to add RunningJob: " + job.id + " with delay: " + delay)
 
+    Logger.debug("Finite delay: " + FiniteDuration(job.startTime.getTime + delay - System.currentTimeMillis(), MILLISECONDS))
     JobScheduleService.addRunningJob(job.id,
       system.scheduler.scheduleOnce(
         FiniteDuration(job.startTime.getTime + delay - System.currentTimeMillis(), MILLISECONDS),  // The next start time
@@ -91,6 +102,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
         DispatchJob(job.id)
       )
     )
+    Logger.debug("Start setNextJob")
     keyspace.setNextJob(job.id, delay)
       .recover {
         case ex: Throwable =>
@@ -99,15 +111,44 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
       }
   }
 
-  private def dispatchJob(job: Job): Future[List[PushJob]] = {
+  private def dispatchJob(job: Job): Future[Seq[PushJob]] = {
     // TODO: Support more types
+    Logger.debug("dispatchJob enter")
     NotificationType.withName(job.notificationType) match {
       case NotificationType.PUSH =>
-        db.getUserTokensByLabelAndCountry(job.label, job.country).map(
-          tokens => {
-            tokens.toList.map(token => PushJob(job.id, token._1, job.message, Some(job.callToAction), token._2, token._3, token._4))
+        if (hiveClient.isExist) {
+          Logger.debug("Use Hive to query")
+          Source(hiveClient.getScheduledJobUsers(job.label, job.country)).mapAsync(10) { user =>
+            Logger.debug("user to push: " + user)
+            for {
+              gcmTokens <- db.getGcmRegToken(user._1)
+              iosTokens <- db.getIosDeviceToken(user._1)
+            } yield {
+              Logger.debug("gcmTokens: " + gcmTokens)
+              Logger.debug("iosTokens: " + iosTokens)
+              val userTokens: Seq[PushJob] = gcmTokens.zipAll(iosTokens, null, null).map {
+                case (gcmToken, iosToken) =>
+                  PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
+                    if (gcmToken != null) Some(gcmToken.token) else None,
+                    if (iosToken != null) Some(iosToken.deviceToken) else None
+                  )
+              }
+              Logger.debug("userTokens(" + user._1 + "): " + userTokens.toString())
+              userTokens
+            }
+          }.runFold(Seq[PushJob]())(_ ++ _).recover {
+            case ex: Throwable =>
+              Logger.error("Getting user tokens encounters error: " + ex.getMessage)
+              Seq()
           }
-        )
+        } else {
+          Logger.debug("Use mysql to query")
+          db.getUserTokensByLabelAndCountry(job.label, job.country).map(
+            tokens => {
+              tokens.map(token => PushJob(job.id, token._1, job.message, Some(job.callToAction), token._2, token._3, token._4))
+            }
+          )
+        }
       case NotificationType.POPUP =>
         Logger.info("Coming soon...")
         Future.successful(List.empty[PushJob])

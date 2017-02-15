@@ -29,6 +29,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-slick" % "2.0.2",
   "com.lightbend.akka" %% "akka-stream-alpakka-cassandra" % "0.3",
   "com.github.etaty" %% "rediscala" % "1.7.0",
+  "org.apache.hadoop" % "hadoop-common" % "2.7.3",
+  "org.apache.hive" % "hive-jdbc" % "1.2.1",
   // Amazon SNS SDK
   "com.amazonaws" % "aws-java-sdk" % "1.11.46",
   // Logging
@@ -70,6 +72,13 @@ publishTo := {
 }
 
 // releaseSettings
+releaseVersionBump := {
+  sys.props.getOrElse("release.version.bump", default = "bugfix") match {
+    case "major" => sbtrelease.Version.Bump.Major
+    case "minor" => sbtrelease.Version.Bump.Minor
+    case _ => sbtrelease.Version.Bump.Bugfix
+  }
+}
 releaseProcess := Seq[ReleaseStep](
   checkSnapshotDependencies,
   inquireVersions,
@@ -93,7 +102,7 @@ lazy val appSecret = Option(System.getProperty("appsecret")).getOrElse("J@O6CmRZ
 lazy val commonSettings = Seq(
   rpmVendor := "migme",
   rpmLicense := Some("migme"),
-  version in Rpm := "0.0.7",
+  version in Rpm := version.value.split("-")(0),
   packageDescription in Rpm := "Notificatoin service of Migme.",
 
   organization := "me.mig.mars",

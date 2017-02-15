@@ -27,7 +27,7 @@
   </appender>
 
   <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-    <destination>${logstash.host:-localhost}:${logstash.port:-5000}</destination>
+    <destination>${LOGSTASH_HOST:-localhost}:${LOGSTASH_PORT:-5000}</destination>
     <!-- encoder is required -->
     <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
   </appender>
@@ -43,7 +43,7 @@
   </appender>
 
   <logger name="play" level="INFO" />
-  <logger name="application" level="${log.root.level:-DEBUG}" />
+  <logger name="application" level="${LOG_ROOT_LEVEL:-DEBUG}" />
   <logger name="slick" level="INFO"/>
   <logger name="com.zaxxer.hikari" level="INFO" />
   <logger name="org.asynchttpclient.netty.channel" level="INFO" />
@@ -58,7 +58,7 @@
   <logger name="org.apache.kafka" level="WARN" />
   <logger name="javax.management.mbeanserver" level="WARN" />
 
-  <root level="${log.root.level:-DEBUG}">
+  <root level="${LOG_ROOT_LEVEL:-DEBUG}">
     <appender-ref ref="ASYNC_FILE" />
     <appender-ref ref="ASYNC_STDOUT" />
     <appender-ref ref="LOGSTASH" />
