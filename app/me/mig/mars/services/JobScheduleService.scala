@@ -38,7 +38,7 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
     ),
     name = "JobScheduler"
   )
-  Logger.debug("Number of nodes in cluster: " + Cluster(system).state.members.filter(_.status == MemberStatus.Up))
+  Logger.debug("Number of nodes in cluster: " + Cluster(system).state.members.filter(_.status == MemberStatus.Up))  
 
   // Loading stored jobs and scheduling to dispatch...
   Logger.info("Starting JobScheduleService to load jobs...")
