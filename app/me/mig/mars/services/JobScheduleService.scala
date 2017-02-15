@@ -2,14 +2,16 @@ package me.mig.mars.services
 
 import javax.inject.{Inject, Named, Singleton}
 
-import akka.actor.{ActorRef, ActorSystem, Cancellable}
+import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, PoisonPill, Props}
+import akka.cluster.singleton.{ClusterSingletonManager, ClusterSingletonManagerSettings}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import me.mig.mars.models.JobModel.{CreateJob, CreateJobAck, DispatchJob, GetJobsAck}
+import me.mig.mars.models.JobModel.{CreateJob, CreateJobAck, DispatchJob, GetJobsAck, ScheduleJob}
 import me.mig.mars.models.NotificationModel.GetNotificationTypesAck
 import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.repositories.mysql.FusionDatabase
+import me.mig.mars.services.JobScheduleService.JobScheduler
 import me.mig.mars.workers.push.PushNotificationKafkaConsumer
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.concurrent.InjectedActorSupport
@@ -25,6 +27,16 @@ import scala.concurrent.duration._
 @Singleton
 class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycle: ApplicationLifecycle, configuration: Configuration, implicit val fusionDB: FusionDatabase, implicit val keyspace: MarsKeyspace, implicit val materializer: Materializer, @Named("JobScheduleWorker") jobScheduleWorker: ActorRef, pushNotificationKafkaConsumer: PushNotificationKafkaConsumer) extends InjectedActorSupport {
   import system.dispatcher
+
+  // Initializing singleton actor to perform the job scheduling in the cluster.
+  system.actorOf(
+    ClusterSingletonManager.props(
+      singletonProps = Props(classOf[JobScheduler], jobScheduleWorker),
+      terminationMessage = PoisonPill,
+      settings = ClusterSingletonManagerSettings(system)
+    ),
+    name = "JobScheduler"
+  )
 
   // Loading stored jobs and scheduling to dispatch...
   Logger.info("Starting JobScheduleService to load jobs...")
@@ -54,18 +66,18 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
   addLifeCycleStopHook()
 
   private def scheduleJob(jobId: String, delay: Long): Unit = {
-    Logger.debug("scheduleJob delay: " + delay)
-    if (JobScheduleService.isExist(jobId)) {
-      Logger.warn(s"Job ${jobId} already running, stop and start the new one.")
-      JobScheduleService.removeRunningJob(jobId)
-    }
-    val cancellable = system.scheduler.scheduleOnce(
-      FiniteDuration(delay, MILLISECONDS),
-      jobScheduleWorker,
-      DispatchJob(jobId)
-    )
-//    addLifeCycleStopHook(cancellable)
-    JobScheduleService.addRunningJob(jobId, cancellable)
+//    Logger.debug("scheduleJob delay: " + delay)
+//    if (JobScheduleService.isExist(jobId)) {
+//      Logger.warn(s"Job ${jobId} already running, stop and start the new one.")
+//      JobScheduleService.removeRunningJob(jobId)
+//    }
+//    val cancellable = system.scheduler.scheduleOnce(
+//      FiniteDuration(delay, MILLISECONDS),
+//      jobScheduleWorker,
+//      DispatchJob(jobId)
+//    )
+////    addLifeCycleStopHook(cancellable)
+//    JobScheduleService.addRunningJob(jobId, cancellable)
   }
 
   @deprecated(message = "Since jobs will change frequently, we do not need to bind each job on the stop hook.", since = "Next release if service is running stabl")
@@ -97,7 +109,8 @@ class JobScheduleService @Inject()(implicit val system: ActorSystem, appLifecycl
           val delay = job.startTime - System.currentTimeMillis()
           scheduleJob(jobId, delay)
           // Initializing Kafa consumers
-          pushNotificationKafkaConsumer.launch(job.id)
+          // Replace all spaces into underscore because Kafka seems not allow space in topic name.
+          pushNotificationKafkaConsumer.launch(job.id.replaceAll(" ", "_"))
           CreateJobAck(true)
         },
         ex => new InterruptedException("Creating job into cassandra encounters error: " + ex.getMessage)
@@ -159,4 +172,25 @@ object JobScheduleService {
       jobTuple._2.cancel()
       runningJobMap -= jobTuple._1
     }
+
+  class JobScheduler(jobScheduleWorker: ActorRef) extends Actor {
+    override def receive: Receive = {
+      case ScheduleJob(jobId, delay) => scheduleJob(jobId, delay)
+    }
+
+    private def scheduleJob(jobId: String, delay: Long): Unit = {
+      Logger.debug("scheduleJob delay: " + delay)
+      if (JobScheduleService.isExist(jobId)) {
+        Logger.warn(s"Job ${jobId} already running, stop and start the new one.")
+        removeRunningJob(jobId)
+      }
+      val cancellable = context.system.scheduler.scheduleOnce(
+        FiniteDuration(delay, MILLISECONDS),
+        jobScheduleWorker,
+        DispatchJob(jobId)
+      )
+      //    addLifeCycleStopHook(cancellable)
+      addRunningJob(jobId, cancellable)
+    }
+  }
 }
