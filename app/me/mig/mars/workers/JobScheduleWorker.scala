@@ -126,7 +126,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
             } yield {
               Logger.debug("gcmTokens: " + gcmTokens)
               Logger.debug("iosTokens: " + iosTokens)
-              val userTokens: Seq[PushJob] = (gcmTokens zip iosTokens).map {
+              val userTokens: Seq[PushJob] = gcmTokens.zipAll(iosTokens, null, null).map {
                 case (gcmToken, iosToken) =>
                   PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
                     if (gcmToken != null) Some(gcmToken.token) else None,
