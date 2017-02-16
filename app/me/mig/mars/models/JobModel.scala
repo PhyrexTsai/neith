@@ -25,7 +25,7 @@ object JobModel {
   case class NextJob(id: String, startTime: Timestamp)
 
   /** Event models **/
-  case class ScheduleJob(jobId: String, delay: Long)
+  case class ScheduleJob(jobId: String)
   case class DispatchJob(jobId: String)
   case class PushJob(jobId: String, userId: Int, message: String, callToAction: Option[Map[String, String]], username: Option[String], gcmToken: Option[String], iosToken: Option[Array[Byte]])
 
