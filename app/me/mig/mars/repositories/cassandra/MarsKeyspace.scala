@@ -21,7 +21,7 @@ import scala.concurrent.Future
   * Created by jameshsiao on 12/19/16.
   */
 @Singleton
-class MarsKeyspace @Inject()(implicit system: ActorSystem, configuration: Configuration, applicationLifecycle: ApplicationLifecycle) {
+class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle: ApplicationLifecycle, implicit val system: ActorSystem) {
   import collection.JavaConversions._
   import materializer.executionContext
 
