@@ -10,7 +10,7 @@ import me.mig.neith.models.Users._
 import play.api.libs.Files
 import play.api.libs.json.{JsValue, Json}
 import play.api.{Configuration, Logger}
-import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.libs.ws.WSClient
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -121,6 +121,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
       val xml = response.xml
       val multipartUploadList = ListBuffer[MultipartUpload]()
       multipartUploadList ++= (xml \ "Upload").map(n => {
+        // FIXME replace Date
         MultipartUpload((n \ "Key").text, (n \ "UploadId").text, new Date())
       })
 
@@ -147,6 +148,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
       val xml = response.xml
       val partList = ListBuffer[Part]()
       partList ++= (xml \ "Part").map(n => {
+        // FIXME replace Date
         Part((n \ "PartNumber").text.toInt, (n \ "ETag").text, (n \ "Size").text.toDouble, new Date())
       })
 

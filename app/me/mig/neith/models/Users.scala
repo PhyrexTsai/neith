@@ -39,8 +39,6 @@ object Users {
   implicit val multipartUploadReads = Json.reads[MultipartUpload]
   implicit val partWrites = Json.writes[Part]
   implicit val partReads = Json.reads[Part]
-//  implicit val multipartUploadListWrites = Json.writes[List[MultipartUpload]]
-//  implicit val multipartUploadListReads = Json.reads[List[MultipartUpload]]
   implicit val completeMultipartUploadWrites = Json.writes[CompleteMultipartUpload]
   implicit val completeMultipartUploadReads = Json.reads[CompleteMultipartUpload]
 }
