@@ -4,7 +4,6 @@ import me.mig.neith.exceptions.NeithException
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.mvc._
-import fly.play.s3.S3Exception
 
 /**
   * Created by phyrextsai on 2017/2/10.
