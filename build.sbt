@@ -15,7 +15,6 @@ libraryDependencies ++= Seq(
   filters,
   "net.kaliber" %% "play-s3" % "8.0.0",
   "net.logstash.logback" % "logstash-logback-encoder" % "4.8",
-   "io.spray" %%  "spray-json" % "1.3.3",
   // Play test in Scala test
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test",
 

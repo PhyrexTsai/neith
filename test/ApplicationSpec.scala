@@ -89,7 +89,17 @@ class ApplicationSpec extends Specification {
     }
 
     "complete multipart upload on POST /v1/users/:userId/completeMultipartUpload" in new WithApplication {
-
+      val body = Json.obj(
+        "fileName" -> "file.jpeg",
+        "uploadId" -> UPLOAD_ID
+      )
+      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/completeMultipartUpload").withJsonBody(body)
+//      val result = route(request).get
+//
+//      status(result) must equalTo(OK)
+//      contentType(result) must beSome.which(_ == "application/json")
+//      println("completeMultipartUpload.content: " + contentAsString(result))
+//      contentAsString(result) must equalTo("{\"complete\":true}")
     }
 
     "abort multipart upload on DELETE /v1/users/:userId/abortMultipartUpload" in new WithApplication {
@@ -98,7 +108,7 @@ class ApplicationSpec extends Specification {
 
       status(result) must equalTo(OK)
       contentType(result) must beSome.which(_ == "application/json")
-      println("abortMultipartUpload.content: " + contentAsString(result))
+      contentAsString(result) must equalTo("{\"abort\":true}")
     }
 
     "list multipart upload on GET /v1/users/:userId/listMultipartUploads" in new WithApplication {

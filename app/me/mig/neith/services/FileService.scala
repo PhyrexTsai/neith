@@ -82,6 +82,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
   }
 
   def completeMultipartUpload(userId: Int, data: CompleteMultipartUpload): Future[JsValue] = {
+    // TODO implement this part
     val bucketFilePartUploadTicket: Seq[BucketFilePartUploadTicket] = Nil
     val result = bucket.completeMultipartUpload(
       new BucketFileUploadTicket(data.uploadTicket.fileName, data.uploadTicket.uploadId),
