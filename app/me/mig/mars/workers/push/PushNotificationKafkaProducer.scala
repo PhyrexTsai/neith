@@ -20,13 +20,20 @@ class PushNotificationKafkaProducer @Inject()(configuration: Configuration, syst
   import system.dispatcher
 
   private val producerSettings = ProducerSettings(system, new ByteArraySerializer, new StringSerializer)
-    .withBootstrapServers(configuration.underlying.getString("kafka.bootstrap-servers"))
+    .withBootstrapServers(configuration.underlying.getString("akka.kafka.bootstrap.servers"))
+
+  private var producedCount = 0
 
   override def receive: Receive = {
     case pushJob: PushJob =>
       Source.single(pushJob)
         // Replace all spaces into underscore because Kafka seems not allow space in topic name.
-        .map( job => new ProducerRecord[Array[Byte], String](job.jobId.replaceAll(" ", "_"), Json.toJson[PushJob](job).toString) )
+        .map { job =>
+          Logger.debug("Publish jobs into kafka: " + pushJob)
+          producedCount += 1
+          Logger.debug("produced count: " + producedCount)
+          new ProducerRecord[Array[Byte], String](job.jobId.replaceAll(" ", "_"), Json.toJson[PushJob](job).toString)
+        }
         .runWith(Producer.plainSink(producerSettings))
         .recover {
           case x: Throwable => Logger.error("Produce kafka error: " + x.getMessage)

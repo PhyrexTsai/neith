@@ -4,7 +4,7 @@ import sbtrelease.ReleaseStateTransformations._
 
 name := """mars"""
 
-//scalaVersion in Global := "2.11.8"
+scalaVersion in Global := "2.11.8"
 
 val akkaVersion = "2.4.16"
 
@@ -27,7 +27,7 @@ libraryDependencies ++= Seq(
   // Datastores
   "mysql" % "mysql-connector-java" % "5.1.34",
   "com.typesafe.play" %% "play-slick" % "2.0.2",
-  "com.lightbend.akka" %% "akka-stream-alpakka-cassandra" % "0.3",
+  "com.lightbend.akka" %% "akka-stream-alpakka-cassandra" % "0.6",
   "com.github.etaty" %% "rediscala" % "1.7.0",
   "org.apache.hadoop" % "hadoop-common" % "2.7.3",
   "org.apache.hive" % "hive-jdbc" % "1.2.1",
@@ -107,7 +107,6 @@ lazy val commonSettings = Seq(
 
   organization := "me.mig.mars",
   version := (version in ThisBuild).value,
-  scalaVersion := "2.11.8",
   jira := sys.props.get("JIRA").getOrElse("QA-XXX"),
 
   // Disable publishing the scaladoc jar
