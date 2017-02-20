@@ -14,7 +14,6 @@ import me.mig.mars.models.NotificationModel.GetNotificationTypesAck
 import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.repositories.mysql.FusionDatabase
-import me.mig.mars.workers.push.PushNotificationKafkaConsumer
 import play.api.inject.ApplicationLifecycle
 import play.api.{Configuration, Logger}
 
@@ -26,7 +25,7 @@ import scala.concurrent.duration._
   * Created by jameshsiao on 12/13/16.
   */
 @Singleton
-class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configuration: Configuration, @Named("JobScheduleWorker") jobScheduleWorker: ActorRef, pushNotificationKafkaConsumer: PushNotificationKafkaConsumer, implicit val system: ActorSystem, implicit val materializer: Materializer, fusionDB: FusionDatabase, keyspace: MarsKeyspace) {
+class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configuration: Configuration, @Named("JobScheduleWorker") jobScheduleWorker: ActorRef, implicit val system: ActorSystem, implicit val materializer: Materializer, fusionDB: FusionDatabase, keyspace: MarsKeyspace) {
   import system.dispatcher
 
   implicit val timeout: Timeout = 5 seconds
@@ -49,21 +48,6 @@ class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configura
     name = "JobSchedulerProxy")
 
   addLifeCycleStopHook()
-
-//  private def scheduleJob(jobId: String, delay: Long): Unit = {
-//    Logger.debug("scheduleJob delay: " + delay)
-//    if (JobScheduleService.isExist(jobId)) {
-//      Logger.warn(s"Job ${jobId} already running, stop and start the new one.")
-//      JobScheduleService.removeRunningJob(jobId)
-//    }
-//    val cancellable = system.scheduler.scheduleOnce(
-//      FiniteDuration(delay, MILLISECONDS),
-//      jobScheduleWorker,
-//      DispatchJob(jobId)
-//    )
-////    addLifeCycleStopHook(cancellable)
-//    JobScheduleService.addRunningJob(jobId, cancellable)
-//  }
 
   private def addLifeCycleStopHook(): Unit = {
     appLifecycle.addStopHook { () =>
@@ -92,10 +76,6 @@ class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configura
     }.mapAsync[String](1) { scheduleJob =>
       (jobSchedulerProxy ? scheduleJob).map(x => scheduleJob.jobId)
     }.map { jobId =>
-      // TODO: Use sharing consumer
-      // Initializing Kafa consumers
-      // Replace all spaces into underscore because Kafka seems not allow space in topic name.
-      pushNotificationKafkaConsumer.launch(jobId)
       CreateJobAck(true)
     }
 
@@ -122,15 +102,12 @@ class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configura
   def getNotificationTypes(): Flow[Int, GetNotificationTypesAck, _] = {
     Flow[Int].map(_ =>
       GetNotificationTypesAck(NotificationType.values.map(_.toString).toList)
-//      keyspace.getNotificationTypes().transform(
-//        GetNotificationTypesAck(_),
-//        ex => ex
-//      )
     )
   }
 
   def propsJobScheduler() = Props(new JobScheduler())
 
+  // Real actor to run the scheduling jobs...
   class JobScheduler() extends Actor {
     // Loading stored jobs and scheduling to dispatch...
     Logger.info("Starting JobScheduler to load jobs...")
@@ -156,17 +133,14 @@ class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configura
           if (!job.disabled.getOrElse(false)) {
             Logger.debug("job loaded: " + job.id)
             scheduleJob(job)
-            // TODO: Use sharing consumer
-            // Initializing Kafka consumers
-            pushNotificationKafkaConsumer.launch(job.id)
           }
         }
-        .to(Sink.ignore).run()
+        .runWith(Sink.head)
     }
 
     private def scheduleJob(job: Job): Unit = {
       val delay =
-      // If start time is before now, run the job immediately.
+        // If start time is before now, run the job immediately.
         if (job.startTime.getTime < System.currentTimeMillis())
           0
         else
@@ -181,7 +155,6 @@ class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configura
         jobScheduleWorker,
         DispatchJob(job.id)
       )
-      //    addLifeCycleStopHook(cancellable)
       JobScheduleService.addRunningJob(job.id, cancellable)
     }
   }

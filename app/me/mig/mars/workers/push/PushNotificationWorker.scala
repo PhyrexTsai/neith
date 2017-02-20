@@ -249,7 +249,9 @@ object PushNotificationWorker {
           )
         ),
         /* New version body */
-        "alertAction" -> action
+        "alertAction" -> action,
+        "badge" -> 1,
+        "sound" -> ""
       ).toString()
     ).toString()
   }

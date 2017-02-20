@@ -14,6 +14,7 @@ import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.repositories.hive.HiveClient
 import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.services.JobScheduleService
+import me.mig.mars.workers.push.PushNotificationKafkaConsumer
 import play.api.{Configuration, Logger}
 
 import scala.concurrent.Future
@@ -22,7 +23,7 @@ import scala.concurrent.duration._
 /**
   * Created by jameshsiao on 11/22/16.
   */
-class JobScheduleWorker @Inject()(configuration: Configuration, implicit val system: ActorSystem, implicit val materializer: Materializer, implicit val db: FusionDatabase, implicit val keyspace: MarsKeyspace, @Named("PushNotificationKafkaProducer") pushNotificationKafkaProducer: ActorRef, hiveClient: HiveClient) extends Actor {
+class JobScheduleWorker @Inject()(configuration: Configuration, implicit val system: ActorSystem, implicit val materializer: Materializer, implicit val db: FusionDatabase, implicit val keyspace: MarsKeyspace, @Named("PushNotificationKafkaProducer") pushNotificationKafkaProducer: ActorRef, pushNotificationKafkaConsumer: PushNotificationKafkaConsumer, hiveClient: HiveClient) extends Actor {
   private final val ONE_DAY: Long = 86400000
 
   implicit val executeContext = materializer.executionContext
@@ -67,10 +68,16 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
         .mapConcat(_.toList)
         .map { pushJob =>
           Logger.debug("pushJobs: " + pushJob)
-          Logger.info("job with tokens: " + pushJob)
           // Publishing to job queue(Kafka) ready for consuming.
-          pushNotificationKafkaProducer ! pushJob
-        }.runWith(Sink.ignore)
+          if (pushJob.gcmToken.nonEmpty || pushJob.iosToken.nonEmpty) {
+            pushNotificationKafkaProducer ! pushJob
+          }
+        }
+        .map { nothing =>
+          // Start consumer streams standby
+          pushNotificationKafkaConsumer.assign(job.jobId)
+        }
+        .runWith(Sink.ignore)
         .recover {
           case ex => Logger.error("Dispatching job encounters error: " + ex.getMessage)
         }

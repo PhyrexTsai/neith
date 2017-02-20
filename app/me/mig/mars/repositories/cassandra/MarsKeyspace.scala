@@ -70,7 +70,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
   // Tables
   private[cassandra] class JobsTable() {
 
-    private final val INSERT_JOB = "INSERT INTO mars.jobs (id, creator, label, country, startTime, endTime, interval, notificationType, message, callToAction, createdTime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    private final val INSERT_JOB = "INSERT INTO mars.jobs (id, creator, label, country, startTime, endTime, interval, notificationType, message, callToAction, createdTime, disabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, null)"
     private final val SELECT_JOBS = "SELECT * from mars.jobs"
     private final val SELECT_STARTTIME_INTERVAL = "SELECT startTime, interval from mars.jobs where id = "
     private final val SET_NEXT_JOB = "UPDATE mars.jobs SET startTime = ? where id = ?"

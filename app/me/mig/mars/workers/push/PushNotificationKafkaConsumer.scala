@@ -20,17 +20,30 @@ import play.api.{Configuration, Logger}
 class PushNotificationKafkaConsumer @Inject()(configuration: Configuration, system: ActorSystem, implicit val materializer: Materializer, @Named("PushNotificationWorker") pushNotificationWorker: ActorRef) {
   import system.dispatcher
 
-  Logger.info("bootstrap-servers: " + configuration.underlying.getString("kafka.bootstrap-servers"))
+  Logger.info("bootstrap-servers: " + configuration.underlying.getString("akka.kafka.bootstrap.servers"))
 
-  val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
-    .withBootstrapServers(configuration.underlying.getString("kafka.bootstrap-servers"))
-    .withGroupId("Push")
+  private final val GROUP_ID = "Push"
+
+  private var consumedCount = 0
+
+  private val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
+    .withBootstrapServers(configuration.underlying.getString("akka.kafka.bootstrap.servers"))
+    .withGroupId(GROUP_ID)
     .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+//  private val consumerPool: ActorRef = system.actorOf(new SmallestMailboxPool(5).props(KafkaConsumerActor.props(consumerSettings)))
 
-  def launch(topic: String) = {
+  def assign(topic: String) = {
     // Replace all spaces into underscore because Kafka seems not allow space in topic name.
-    Logger.info("Consumer launching topic: " + topic.replaceAll(" ", "_"))
-    Consumer.committableSource(consumerSettings, Subscriptions.topics(topic.replaceAll(" ", "_")))
+    val validTopic = topic.replaceAll(" ", "_")
+    Logger.info("Consumer launching topic: " + validTopic)
+//    Consumer.committableExternalSource[Array[Byte], String](
+//      consumerPool,
+//      Subscriptions.assignment(
+//        new TopicPartition(validTopic, 1)
+//      ),
+//      GROUP_ID,
+//      10 seconds)
+    Consumer.committableSource(consumerSettings, Subscriptions.topics(validTopic))
       .map { msg =>
         Logger.debug("committableOffset: " + msg.committableOffset)
         Logger.debug("Reading data: " + msg.record.value())
@@ -38,6 +51,8 @@ class PushNotificationKafkaConsumer @Inject()(configuration: Configuration, syst
         Logger.info("Consumer committable message: " + pushJob)
         // Sending push notification
         pushNotificationWorker ! pushJob
+        consumedCount += 1
+        Logger.debug("Consumed count: " + consumedCount)
         msg.committableOffset
       }
       .batch(max = 20, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) =>
@@ -47,7 +62,7 @@ class PushNotificationKafkaConsumer @Inject()(configuration: Configuration, syst
       .mapAsync(3)(_.commitScaladsl())
       .runWith(Sink.ignore)
       .recover {
-        case x => Logger.error("Cosuming data error: " + x)
+        case x: Throwable => Logger.error("Kafka Consuming data error: " + x.getMessage)
       }
   }
 
