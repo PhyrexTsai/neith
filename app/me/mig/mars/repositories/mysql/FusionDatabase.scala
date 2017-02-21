@@ -137,24 +137,49 @@ class FusionDatabase @Inject()(@NamedDatabase("fusion") dbConfigProvider: Databa
     *       left outer join user on userid.username=user.username
     *       where countryid in (List of country IDs);
     *
-    * @param labels     List of user labels to match
-    * @param countries  List of user countries to match
+    * @param usernames      List of user names to match, optional to labels and countries
+    * @param labels     List of user labels to match, optional
+    * @param countries  List of user countries to match, optional
     * @return           Seq[]
     */
-  def getUserTokensByLabelAndCountry(labels: List[Short], countries: List[Int]): Future[Seq[(Int, Option[String], Option[String], Option[Array[Byte]])]] = {
-    val selectedUsers = for {
-      ((label, userId), userInfo) <- userLabels.filter(_.labelType inSet labels)
-                                              .joinLeft(userIds).on(_.userId === _.id)
-                                              .joinLeft(users).on(_._2.map(_.username) === _.username)
-                                              .filter(_._2.map(_.countryId) inSet countries)
-    } yield (label.userId, label.labelType, userId.map(_.username), userInfo.map(_.countryId))
+  def getUserTokensByLabelAndCountry(usernames: Option[List[String]], labels: Option[List[Short]], countries: Option[List[Int]]): Future[Seq[(Option[Int], Option[String], Option[String], Option[Array[Byte]])]] = {
+    val selectedUsers = usernames match {
+      case Some(nameList) =>
+        for {
+          (user, userId) <- users.filter(_.username inSet nameList)
+                                .joinLeft(userIds).on(_.username === _.username)
+        } yield (userId.map(_.id), userId.map(_.username))
+      case None => (labels, countries) match {
+        case (Some(labelList), None) =>
+          for {
+            ((label, userId), user) <- userLabels.filter(_.labelType inSet labelList)
+                                                .joinLeft(userIds).on(_.userId === _.id)
+                                                .joinLeft(users).on(_._2.map(_.username) === _.username)
+          } yield (userId.map(_.id), user.map(_.username))
+        case (None, Some(countryList)) =>
+          for {
+            (user, userId) <- users.filter(_.countryId inSet countryList)
+                                  .joinLeft(userIds).on(_.username === _.username)
+          } yield (userId.map(_.id), userId.map(_.username))
+        case (Some(labelList), Some(countryList)) =>
+          for {
+            ((label, userId), userInfo) <- userLabels.filter(_.labelType inSet labelList)
+                                                    .joinLeft(userIds).on(_.userId === _.id)
+                                                    .joinLeft(users).on(_._2.map(_.username) === _.username)
+                                                    .filter(_._2.map(_.countryId) inSet countryList)
+          } yield (userId.map(_.id), userId.map(_.username))
+        case _ =>
+          Logger.warn("Either users nor labels and countries are not specified, no criteria to query")
+          throw new IllegalArgumentException("No criteria specified, reject the query")
+      }
+    }
 
     Logger.debug("MySQL query: " + labels + ", countries: " + countries)
 
     val tokens = for {
       ((user, gcmtoken), iostoken) <- selectedUsers.joinLeft(gcmRegTokens).on(_._1 === _.userId)
                                                   .joinLeft(iosDeviceTokens).on(_._1._1 === _.userId)
-    } yield (user._1, user._3, gcmtoken.map(_.token), iostoken.map(_.deviceToken))
+    } yield (user._1, user._2, gcmtoken.map(_.token), iostoken.map(_.deviceToken))
 
     db.run(tokens.result)
   }

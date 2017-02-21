@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import me.mig.mars.ErrorHandler
-import me.mig.mars.models.JobModel.{CreateJob, CreateJobAck, GetJobsAck}
+import me.mig.mars.models.JobModel.{CreateUpdateJob, CreateUpdateJobAck, DeleteJobAck, GetJobsAck}
 import me.mig.mars.models.NotificationModel.GetNotificationTypesAck
 import me.mig.mars.services.JobScheduleService
 import me.mig.mars.workers.push.PushNotificationWorker
@@ -25,16 +25,16 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
     *
     * @return       Success in TRUE or FALSE with error message if the job hasn't created.
     */
-  def createJob = Action.async(ErrorHandler.validateJson[CreateJob]) { request =>
-      Source.single(request.body)
-        .via(jobScheduleService.createJob)
-        .runWith(Sink.head)
-        .map( result => Ok(Json.toJson(result)) )
-        .recover {
-          case x => BadRequest(
-            Json.toJson( CreateJobAck(false, Some("Creating a scheduled job encounters error: " + x.getMessage)) )
-          )
-        }
+  def createUpdateJob = Action.async(ErrorHandler.validateJson[CreateUpdateJob]) { request =>
+    Source.single(request.body)
+      .via(jobScheduleService.createUpdateJob)
+      .runWith(Sink.head)
+      .map( result => Ok(Json.toJson(result)) )
+      .recover {
+        case x: Throwable => BadRequest(
+          Json.toJson( CreateUpdateJobAck(false, Some("Creating/updating a scheduled job encounters error: " + x.getMessage)) )
+        )
+      }
   }
 
   /**
@@ -51,8 +51,20 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
       .runWith(Sink.head)
       .map( result => Ok(Json.toJson(result)) )
       .recover {
-        case x => BadRequest(
+        case x: Throwable => BadRequest(
           Json.toJson( GetJobsAck(List.empty, Some("Getting job list encounters error: " + x.getMessage)) )
+        )
+      }
+  }
+
+  def deleteJob(id: String) = Action.async { request =>
+    Source.single(id)
+      .via(jobScheduleService.deleteJob)
+      .runWith(Sink.head)
+      .map( result => Ok(Json.toJson(result)) )
+      .recover {
+        case x: Throwable => BadRequest(
+          Json.toJson( DeleteJobAck(false, Some("Deleting job [" + id + "] encounters error: " + x.getMessage)) )
         )
       }
   }
@@ -63,7 +75,7 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
       .runWith(Sink.head)
       .map( result => Ok(Json.toJson(result)) )
       .recover {
-        case x => BadRequest(
+        case x: Throwable => BadRequest(
           Json.toJson( GetNotificationTypesAck(List.empty, Some("Getting notification types encounters error: " + x.getMessage)) )
         )
       }

@@ -68,14 +68,22 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
         .mapConcat(_.toList)
         .map { pushJob =>
           Logger.debug("pushJobs: " + pushJob)
-          // Publishing to job queue(Kafka) ready for consuming.
-          if (pushJob.gcmToken.nonEmpty || pushJob.iosToken.nonEmpty) {
-            pushNotificationKafkaProducer ! pushJob
+          (pushJob.gcmToken, pushJob.iosToken) match {
+            case (None, None) => pushJob.username
+            case _ =>
+              // Publishing to job queue(Kafka) ready for consuming.
+              pushNotificationKafkaProducer ! pushJob
+              None
           }
         }
-        .map { nothing =>
-          // Start consumer streams standby
-          pushNotificationKafkaConsumer.assign(job.jobId)
+        .map {
+          case Some(username) =>
+            Logger.info("No tokens for user " + username + " to push, mark as failed")
+            // TODO: Increase failed count in the record
+          case _ =>
+            // No username passed means sent tokens to push.
+            // Start consumer streams standby
+            pushNotificationKafkaConsumer.assign(job.jobId)
         }
         .runWith(Sink.ignore)
         .recover {
@@ -125,7 +133,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
       case NotificationType.PUSH =>
         if (hiveClient.isExist) {
           Logger.debug("Use Hive to query")
-          Source(hiveClient.getScheduledJobUsers(job.label, job.country)).mapAsync(10) { user =>
+          Source(hiveClient.getScheduledJobUsers(job.users, job.label, job.country)).mapAsync(10) { user =>
             Logger.debug("user to push: " + user)
             for {
               gcmTokens <- db.getGcmRegToken(user._1)
@@ -135,7 +143,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
               Logger.debug("iosTokens: " + iosTokens)
               val userTokens: Seq[PushJob] = gcmTokens.zipAll(iosTokens, null, null).map {
                 case (gcmToken, iosToken) =>
-                  PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
+                  PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._2),
                     if (gcmToken != null) Some(gcmToken.token) else None,
                     if (iosToken != null) Some(iosToken.deviceToken) else None
                   )
@@ -150,9 +158,9 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
           }
         } else {
           Logger.debug("Use mysql to query")
-          db.getUserTokensByLabelAndCountry(job.label, job.country).map(
+          db.getUserTokensByLabelAndCountry(job.users, job.label, job.country).map(
             tokens => {
-              tokens.map(token => PushJob(job.id, token._1, job.message, Some(job.callToAction), token._2, token._3, token._4))
+              tokens.map(token => PushJob(job.id, token._1.get, job.message, Some(job.callToAction), token._2, token._3, token._4))
             }
           )
         }

@@ -9,7 +9,7 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
-import me.mig.mars.models.JobModel.{CreateJob, CreateJobAck, DispatchJob, GetJobsAck, Job, ScheduleJob}
+import me.mig.mars.models.JobModel.{CreateUpdateJob, CreateUpdateJobAck, DeleteJobAck, DispatchJob, GetJobsAck, Job, ScheduleJob}
 import me.mig.mars.models.NotificationModel.GetNotificationTypesAck
 import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
@@ -55,28 +55,31 @@ class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configura
     }
   }
 
-  def createJob(): Flow[CreateJob, CreateJobAck, _] = {
+  def createUpdateJob(): Flow[CreateUpdateJob, CreateUpdateJobAck, _] = {
 
-    Flow[CreateJob].mapAsync(2) { job =>
-      Logger.info("Starting createJob...")
+    Flow[CreateUpdateJob].mapAsync(2) { job =>
+      Logger.info("Starting createUpdateJob...")
+
+      if (job.users.isEmpty && job.label.isEmpty && job.country.isEmpty)
+        throw new IllegalArgumentException("No user, label or country specified, please provide at least one criteria for query.")
 
       if (job.startTime < System.currentTimeMillis())
         throw new IllegalArgumentException("StartTime is before now.")
 
       // Store the job into cassandra
-      keyspace.createJob(job).transform[ScheduleJob](
+      keyspace.createUpdateJob(job).transform[ScheduleJob](
         jobId => {
           Logger.info("Job created: " + jobId)
 //          val delay = job.startTime - System.currentTimeMillis()
           //          scheduleJob(jobId, delay)
           ScheduleJob(jobId)
         },
-        ex => new InterruptedException("Creating job into cassandra encounters error: " + ex.getMessage)
+        ex => new InterruptedException("Creating/updating job into cassandra encounters error: " + ex.getMessage)
       )
     }.mapAsync[String](1) { scheduleJob =>
       (jobSchedulerProxy ? scheduleJob).map(x => scheduleJob.jobId)
     }.map { jobId =>
-      CreateJobAck(true)
+      CreateUpdateJobAck(true)
     }
 
   }
@@ -96,6 +99,20 @@ class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configura
           ex => ex
         )
       }
+    })
+  }
+
+  def deleteJob(): Flow[String, DeleteJobAck, _] = {
+    Flow[String].mapAsync(2)(id => {
+      keyspace.disableJob(id)
+        .transform(
+          success => {
+            // Remove job from running map
+            JobScheduleService.removeRunningJob(id)
+            DeleteJobAck(success)
+          },
+          ex => ex
+        )
     })
   }
 
@@ -176,6 +193,7 @@ object JobScheduleService {
   def removeRunningJob(jobId: String): Boolean = {
     val canceled = runningJobMap.get(jobId).get.cancel()
     runningJobMap -= jobId
+    Logger.debug("runningJobMap: " + runningJobMap)
     canceled
   }
 
