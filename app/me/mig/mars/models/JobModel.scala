@@ -12,9 +12,9 @@ object JobModel {
   /** Table models **/
   case class Job(id: String,
                  creator: String,
-                 users: Option[List[String]],
-                 label: Option[List[Short]],
-                 country: Option[List[Int]],
+                 users: Option[List[String]] = None,
+                 label: Option[List[Short]] = None,
+                 country: Option[List[Int]] = None,
                  startTime: Timestamp,
                  endTime: Option[Timestamp],
                  interval: Option[Long],

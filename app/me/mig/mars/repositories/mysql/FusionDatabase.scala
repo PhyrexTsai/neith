@@ -151,17 +151,20 @@ class FusionDatabase @Inject()(@NamedDatabase("fusion") dbConfigProvider: Databa
         } yield (userId.map(_.id), userId.map(_.username))
       case None => (labels, countries) match {
         case (Some(labelList), None) =>
+          Logger.debug("Only label is set: " + labelList)
           for {
             ((label, userId), user) <- userLabels.filter(_.labelType inSet labelList)
                                                 .joinLeft(userIds).on(_.userId === _.id)
                                                 .joinLeft(users).on(_._2.map(_.username) === _.username)
           } yield (userId.map(_.id), user.map(_.username))
         case (None, Some(countryList)) =>
+          Logger.debug("Only country is set: " + countryList)
           for {
             (user, userId) <- users.filter(_.countryId inSet countryList)
                                   .joinLeft(userIds).on(_.username === _.username)
           } yield (userId.map(_.id), userId.map(_.username))
         case (Some(labelList), Some(countryList)) =>
+          Logger.debug("Both label and country are set: " + labelList + ", " + countryList)
           for {
             ((label, userId), userInfo) <- userLabels.filter(_.labelType inSet labelList)
                                                     .joinLeft(userIds).on(_.userId === _.id)
@@ -173,8 +176,6 @@ class FusionDatabase @Inject()(@NamedDatabase("fusion") dbConfigProvider: Databa
           throw new IllegalArgumentException("No criteria specified, reject the query")
       }
     }
-
-    Logger.debug("MySQL query: " + labels + ", countries: " + countries)
 
     val tokens = for {
       ((user, gcmtoken), iostoken) <- selectedUsers.joinLeft(gcmRegTokens).on(_._1 === _.userId)

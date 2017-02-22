@@ -32,7 +32,7 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
       .map( result => Ok(Json.toJson(result)) )
       .recover {
         case x: Throwable => BadRequest(
-          Json.toJson( CreateUpdateJobAck(false, Some("Creating/updating a scheduled job encounters error: " + x.getMessage)) )
+          Json.toJson( CreateUpdateJobAck(false, Some("Updating a scheduled job encounters error: " + x.getMessage)) )
         )
       }
   }

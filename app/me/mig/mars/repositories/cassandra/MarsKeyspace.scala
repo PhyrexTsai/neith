@@ -76,9 +76,18 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
     private val rowMapping = (row: Row) =>
       Job(row.getString("id"),
         row.getString("creator"),
-        if (row.getList[String]("users", classOf[String]) != null) Some(row.getList[String]("users", classOf[String]).toList) else None,
-        if (row.getList[JavaShort]("label", classOf[JavaShort]) != null) Some(row.getList[JavaShort]("label", classOf[JavaShort]).map(l => l: Short).toList) else None,
-        if (row.getList[Integer]("country", classOf[Integer]) != null) Some(row.getList[Integer]("country", classOf[Integer]).map(c => c: Int).toList) else None,
+        if (row.getList("users", classOf[String]) != null &&
+            row.getList("users", classOf[String]).nonEmpty) // Because cassandra will return EMPTY set if value is null.
+          Some(row.getList[String]("users", classOf[String]).toList)
+        else None,
+        if (row.getList("label", classOf[JavaShort]) != null &&
+            row.getList("label", classOf[JavaShort]).nonEmpty) // Because cassandra will return EMPTY set if value is null.
+          Some(row.getList[JavaShort]("label", classOf[JavaShort]).map(l => l: Short).toList)
+        else None,
+        if (row.getList("country", classOf[Integer]) != null &&
+            row.getList("country", classOf[Integer]).nonEmpty) // Because cassandra will return EMPTY set if value is null.
+          Some(row.getList[Integer]("country", classOf[Integer]).map(c => c: Int).toList)
+        else None,
         new Timestamp(row.getTimestamp("startTime").getTime),
         if (row.getTimestamp("endTime") != null) Some(new Timestamp(row.getTimestamp("endTime").getTime)) else None,
         if (row.get[Long]("interval", classOf[Long]) != null) Some(row.get[Long]("interval", classOf[Long])) else None,

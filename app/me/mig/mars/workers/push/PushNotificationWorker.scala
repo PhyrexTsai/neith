@@ -46,7 +46,7 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
         Logger.warn("Create endpoint error caught InvalidParameterException: " + ipe.getErrorMessage)
         val p: Pattern = Pattern
           .compile(".*Endpoint (arn:aws:sns[^ ]+) already exists " +
-            "with the same token.*")
+            "with the same Token.*")
         val m: Matcher = p.matcher(ipe.getErrorMessage)
         if (m.matches()) {
           // The platform endpoint already exists for this token, but with
