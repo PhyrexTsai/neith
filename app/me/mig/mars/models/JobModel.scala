@@ -12,8 +12,9 @@ object JobModel {
   /** Table models **/
   case class Job(id: String,
                  creator: String,
-                 label: List[Short],
-                 country: List[Int],
+                 users: Option[List[String]] = None,
+                 label: Option[List[Short]] = None,
+                 country: Option[List[Int]] = None,
                  startTime: Timestamp,
                  endTime: Option[Timestamp],
                  interval: Option[Long],
@@ -31,17 +32,29 @@ object JobModel {
 
   /** Json models **/
   // Requests
-  case class CreateJob(id: String, creator: String, label: List[Short], country: List[Int], startTime: Long, endTime: Option[Long] = None, interval: Option[Long], notificationType: String, message: String, callToAction: Map[String, String])
+  case class CreateUpdateJob(id: String,
+                             creator: String,
+                             users: Option[List[String]] = None,
+                             label: Option[List[Short]] = None,
+                             country: Option[List[Int]] = None,
+                             startTime: Long,
+                             endTime: Option[Long] = None,
+                             interval: Option[Long],
+                             notificationType: String,
+                             message: String,
+                             callToAction: Map[String, String])
   // Responses
-  case class CreateJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
+  case class CreateUpdateJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
   case class GetJobsAck(data: List[Job], override val error: Option[String] = None) extends BaseResponse
+  case class DeleteJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
 
   // Json Reads
-  implicit val CreateJobReads = Json.reads[CreateJob]
+  implicit val CreateJobReads = Json.reads[CreateUpdateJob]
   implicit val PushJobReads = Json.reads[PushJob]
   // Json Writes
-  implicit val CreateJobAckWrites = Json.writes[CreateJobAck]
+  implicit val CreateJobAckWrites = Json.writes[CreateUpdateJobAck]
   implicit val JobsWrites = Json.writes[Job]
   implicit val GetJobsAckWrites = Json.writes[GetJobsAck]
+  implicit val DeleteJobAckWrites = Json.writes[DeleteJobAck]
   implicit val PushJobWrites = Json.writes[PushJob]
 }

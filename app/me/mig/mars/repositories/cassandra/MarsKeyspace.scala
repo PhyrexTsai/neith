@@ -2,7 +2,6 @@ package me.mig.mars.repositories.cassandra
 
 import java.lang.{Long => JavaLong, Short => JavaShort}
 import java.sql.Timestamp
-import java.util.{List => JavaList}
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
@@ -10,11 +9,11 @@ import akka.stream.ActorMaterializer
 import akka.stream.alpakka.cassandra.scaladsl.{CassandraSink, CassandraSource}
 import akka.stream.scaladsl.{Sink, Source}
 import com.datastax.driver.core._
-import me.mig.mars.models.JobModel.{CreateJob, Job, NextJob}
+import me.mig.mars.models.JobModel.{CreateUpdateJob, Job, NextJob}
 import play.api.inject.ApplicationLifecycle
 import play.api.{Configuration, Logger}
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
 /**
@@ -23,11 +22,12 @@ import scala.concurrent.Future
 @Singleton
 class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle: ApplicationLifecycle, implicit val system: ActorSystem) {
   import collection.JavaConversions._
-  import materializer.executionContext
+  import system.dispatcher
+//  import materializer.executionContext
 
   private val config = configuration.underlying.getConfig("cassandra")
   private final val CREATE_KEYSPACE = "CREATE KEYSPACE IF NOT EXISTS mars WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': '1' }"
-  private final val CREATE_JOB_TABLE = "CREATE TABLE IF NOT EXISTS mars.jobs (ID text PRIMARY KEY, CREATOR text, LABEL list<smallint>, COUNTRY list<int>, STARTTIME timestamp, ENDTIME timestamp, INTERVAL bigint, NOTIFICATIONTYPE ascii, MESSAGE text, CALLTOACTION map<text, text>, CREATEDTIME timestamp, DISABLED boolean)"
+  private final val CREATE_JOB_TABLE = "CREATE TABLE IF NOT EXISTS mars.jobs (ID text PRIMARY KEY, CREATOR text, USERS list<text>, LABEL list<smallint>, COUNTRY list<int>, STARTTIME timestamp, ENDTIME timestamp, INTERVAL bigint, NOTIFICATIONTYPE ascii, MESSAGE text, CALLTOACTION map<text, text>, CREATEDTIME timestamp, DISABLED boolean)"
   // Currently might not be used
   private final val CREATE_NOTIFICATION_TYPE_TABLE = "CREATE TABLE IF NOT EXISTS mars.notificationtype ( name ascii, PRIMARY KEY (name) ) WITH caching = {'keys':'NONE','rows_per_partition':'NONE'}"
   private final val CREATE_NOTIFICATION_DESTINATION_TABLE = "CREATE TABLE IF NOT EXISTS mars.notificationdestination ( name ascii, PRIMARY KEY (name) ) WITH caching = {'keys':'NONE','rows_per_partition':'NONE'}"
@@ -53,14 +53,10 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
       throw new InterruptedException("Creating notification type table in the cassandra ecounters error.")
   }
 
-  def createJob(job: CreateJob): Future[String] = jobsTable.createJob(job)
-
+  def createUpdateJob(job: CreateUpdateJob): Future[String] = jobsTable.createUpdateJob(job)
   def getJobs(jobId: Option[String] = None): Future[List[Job]] = jobsTable.getJobs(jobId)
-
   def setNextJob(jobId: String, delay: Long): Future[String] = jobsTable.setNextJob(jobId, delay)
-
   def disableJob(jobId: String): Future[Boolean] = jobsTable.disableJob(jobId)
-
 //  def getNotificationTypes(): Future[List[String]] = notificationTypeTable.getNotificationTypes()
 
   applicationLifecycle.addStopHook(() => {
@@ -70,7 +66,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
   // Tables
   private[cassandra] class JobsTable() {
 
-    private final val INSERT_JOB = "INSERT INTO mars.jobs (id, creator, label, country, startTime, endTime, interval, notificationType, message, callToAction, createdTime, disabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, null)"
+    private final val INSERT_JOB = "INSERT INTO mars.jobs (id, creator, users, label, country, startTime, endTime, interval, notificationType, message, callToAction, createdTime, disabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, null)"
     private final val SELECT_JOBS = "SELECT * from mars.jobs"
     private final val SELECT_STARTTIME_INTERVAL = "SELECT startTime, interval from mars.jobs where id = "
     private final val SET_NEXT_JOB = "UPDATE mars.jobs SET startTime = ? where id = ?"
@@ -80,8 +76,18 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
     private val rowMapping = (row: Row) =>
       Job(row.getString("id"),
         row.getString("creator"),
-        row.getList[JavaShort]("label", classOf[JavaShort]).map(l => l: Short).toList,
-        row.getList[Integer]("country", classOf[Integer]).map(c => c: Int).toList,
+        if (row.getList("users", classOf[String]) != null &&
+            row.getList("users", classOf[String]).nonEmpty) // Because cassandra will return EMPTY set if value is null.
+          Some(row.getList[String]("users", classOf[String]).toList)
+        else None,
+        if (row.getList("label", classOf[JavaShort]) != null &&
+            row.getList("label", classOf[JavaShort]).nonEmpty) // Because cassandra will return EMPTY set if value is null.
+          Some(row.getList[JavaShort]("label", classOf[JavaShort]).map(l => l: Short).toList)
+        else None,
+        if (row.getList("country", classOf[Integer]) != null &&
+            row.getList("country", classOf[Integer]).nonEmpty) // Because cassandra will return EMPTY set if value is null.
+          Some(row.getList[Integer]("country", classOf[Integer]).map(c => c: Int).toList)
+        else None,
         new Timestamp(row.getTimestamp("startTime").getTime),
         if (row.getTimestamp("endTime") != null) Some(new Timestamp(row.getTimestamp("endTime").getTime)) else None,
         if (row.get[Long]("interval", classOf[Long]) != null) Some(row.get[Long]("interval", classOf[Long])) else None,
@@ -92,14 +98,15 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
         Some(row.getBool("disabled"))
       )
 
-    private[cassandra] def createJob(job: CreateJob): Future[String] = {
+    private[cassandra] def createUpdateJob(job: CreateUpdateJob): Future[String] = {
       val preparedStmt = session.prepare(INSERT_JOB)
       val stmtBinder = (bindJob: Job, preparedStmt: PreparedStatement) =>
         preparedStmt.bind(
           bindJob.id,
           bindJob.creator,
-          ListBuffer(bindJob.label: _*): JavaList[Short],   // Need specific conversion to Java types
-          ListBuffer(bindJob.country: _*): JavaList[Int], // Need specific conversion to Java types
+          if (bindJob.users nonEmpty) bindJob.users.get.asJava else null,  // Need specific conversion to Java types
+          if (bindJob.label nonEmpty) bindJob.label.get.asJava else null,   // Need specific conversion to Java types
+          if (bindJob.country nonEmpty) bindJob.country.get.asJava else null, // Need specific conversion to Java types
           bindJob.startTime,
           bindJob.endTime.getOrElse(null),
           if (bindJob.interval nonEmpty) bindJob.interval.get: JavaLong else null, // Need specific conversion to Java types
@@ -109,7 +116,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
           bindJob.createdTime
         )
       val sink = CassandraSink[Job](parallelism = 2, preparedStmt, stmtBinder)
-      val newJob = Job(job.id, job.creator,
+      val newJob = Job(job.id, job.creator, job.users,
         job.label, job.country, new Timestamp(job.startTime), job.endTime match {
         case Some(x) => Some(new Timestamp(job.endTime.get))
         case None => None
@@ -118,7 +125,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
       Source.single(newJob).runWith(sink).transform[String](
         (Done) => newJob.id,
         (ex) => {
-          Logger.error("CreateJob error: " + ex.getMessage)
+          Logger.error("CreateUpdateJob error: " + ex.getMessage)
           ex
         }
       )
@@ -160,6 +167,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
         preparedStmt.bind(jobId)
       val sink = CassandraSink(parallelism = 1, preparedStmt, stmtBinder)
 
+      Logger.info("Disabling job: " + jobId)
       Source.single(jobId).runWith(sink).transform(
         Done => true,
         ex => {
