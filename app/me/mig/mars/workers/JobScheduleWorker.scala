@@ -148,8 +148,12 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
                     if (iosToken != null) Some(iosToken.deviceToken) else None
                   )
               }
+              // Assign the element even if no tokens found for the user, this is for recording the job detail for the following process.
+              val tokensToPush = if (userTokens isEmpty) {
+                Seq( PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._2), None, None) )
+              } else userTokens
               Logger.debug("userTokens(" + user._1 + "): " + userTokens.toString())
-              userTokens
+              tokensToPush
             }
           }.runFold(Seq[PushJob]())(_ ++ _).recover {
             case ex: Throwable =>

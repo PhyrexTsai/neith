@@ -26,7 +26,7 @@ class HiveClient @Inject()(configuration: Configuration) {
 
     val preparedSql: String = users match {
       case Some(userList) =>
-        SELECT_SCHEDULED_JOB_USERS.replace("?", userList.mkString(","))
+        SELECT_SCHEDULED_JOB_USERS.replace("?", userList.mkString("'", "','", "'"))
       case None => (labels, countries) match {
         case (Some(labelList), None) =>
           SELECT_SCHEDULED_JOB_USERS_BY_LABEL.replace("?", labelList.mkString(","))
