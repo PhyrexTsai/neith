@@ -2,7 +2,7 @@ import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 import sbt.Keys._
 import sbtrelease.ReleaseStateTransformations._
 
-name := "neith-in-play"
+name := "neith"
 
 //version := "0.1"
 

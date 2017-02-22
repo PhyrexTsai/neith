@@ -2,6 +2,7 @@ package me.mig.neith.models
 
 import java.util.Date
 
+import fly.play.s3.BucketFilePartUploadTicket
 import play.api.libs.json.Json
 
 /**
@@ -15,15 +16,13 @@ object Users {
 
   case class InitiateMultipartUploadResp(fileName: String, uploadId: String)
 
-  case class PartUploadTicket(partNumber: Int, eTag: String)
-
   case class UploadTicket(fileName: String, uploadId: String)
 
   case class MultipartUpload(fileName: String, uploadId: String, initiated: Date)
 
   case class Part(partNumber: Int, eTag: String, size: Double, lastModified: Date)
 
-  case class CompleteMultipartUpload(bucketName: String, uploadTicket: UploadTicket, partUploadTickets: List[PartUploadTicket])
+  case class CompleteMultipartUpload(fileName: String, uploadId: String, partUploadTickets: List[BucketFilePartUploadTicket])
 
   implicit val uploadRespWrites = Json.writes[UploadResp]
   implicit val uploadRespReads = Json.reads[UploadResp]
@@ -31,8 +30,8 @@ object Users {
   implicit val initiateMultipartUploadReads = Json.reads[InitiateMultipartUpload]
   implicit val initiateMultipartUploadRespWrites = Json.writes[InitiateMultipartUploadResp]
   implicit val initiateMultipartUploadRespReads = Json.reads[InitiateMultipartUploadResp]
-  implicit val partUploadTicketWrites = Json.writes[PartUploadTicket]
-  implicit val partUploadTicketReads = Json.reads[PartUploadTicket]
+  implicit val bucketFilePartUploadTicketWrites = Json.writes[BucketFilePartUploadTicket]
+  implicit val bucketFilePartUploadTicketReads = Json.reads[BucketFilePartUploadTicket]
   implicit val uploadTicketWrites = Json.writes[UploadTicket]
   implicit val uploadTicketReads = Json.reads[UploadTicket]
   implicit val multipartUploadWrites = Json.writes[MultipartUpload]

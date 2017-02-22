@@ -1,5 +1,6 @@
 package me.mig.neith.services
 
+import java.text.SimpleDateFormat
 import java.util.Date
 
 import com.google.inject.Inject
@@ -7,6 +8,7 @@ import fly.play.s3._
 import me.mig.neith.constants.ErrorCodes
 import me.mig.neith.exceptions.NeithException
 import me.mig.neith.models.Users._
+import me.mig.neith.utils.ImageUtils
 import play.api.libs.Files
 import play.api.libs.json.{JsValue, Json}
 import play.api.{Configuration, Logger}
@@ -25,20 +27,22 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
   private val cdnDomain = config.getString("aws.s3.cdnDomain").getOrElse("b-img.cdn.mig.me")
   private val baseDomain = config.getString("aws.s3.baseDomain").getOrElse("s3-us-west-2.amazonaws.com")
   private val httpProtocol = config.getString("aws.s3.httpProtocol").getOrElse("http://")
+  private val fileKey = "file"
 
   val s3 = S3.fromConfiguration(ws, config)
   val bucket = s3.getBucket(bucketName)
+  val simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
   def upload(userId: Int, uploadFile: MultipartFormData[Files.TemporaryFile]): Future[JsValue] = {
     import java.nio.file.{Files, Paths}
-    uploadFile.file("file")
+    uploadFile.file(fileKey)
       .filter(_.ref.file.length() > 0)
       .map(file => {
         val byteArray = Files.readAllBytes(Paths.get(file.ref.file.getPath))
-        val result = bucket + BucketFile(file.filename, file.contentType.get, byteArray)
+        val name = ImageUtils.calculatePath(userId)
+        val result = bucket + BucketFile(name, file.contentType.get, byteArray)
         result map { unit =>
-          // TODO file.filename should hash
-          val fileUrl = httpProtocol + baseDomain + "/" + bucketName + "/" + file.filename
+          val fileUrl = httpProtocol + baseDomain + "/" + bucketName + "/" + name
           Json.obj(
             "fileUrl" -> fileUrl
           )
@@ -58,10 +62,16 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
     }
   }
 
+  /**
+    * Minimun upload size 5MB
+    * @param userId
+    * @param data
+    * @return
+    */
   def uploadPart(userId: Int, data: MultipartFormData[Files.TemporaryFile]): Future[JsValue] = {
     import java.nio.file.{Files, Paths}
     val formDataMap = data.dataParts
-    data.file("file").filter(_.ref.file.length() > 0) match {
+    data.file(fileKey).filter(_.ref.file.length() > 0) match {
       case Some(file) => {
         var dataPartNumber: Int = formDataMap("dataPartNumber").head.toInt
         var fileName = formDataMap("fileName").head
@@ -82,11 +92,9 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
   }
 
   def completeMultipartUpload(userId: Int, data: CompleteMultipartUpload): Future[JsValue] = {
-    // TODO implement this part
-    val bucketFilePartUploadTicket: Seq[BucketFilePartUploadTicket] = Nil
+    println(s"${data.fileName}, ${data.uploadId}, ${data.partUploadTickets}")
     val result = bucket.completeMultipartUpload(
-      new BucketFileUploadTicket(data.uploadTicket.fileName, data.uploadTicket.uploadId),
-      bucketFilePartUploadTicket)
+      new BucketFileUploadTicket(data.fileName, data.uploadId), data.partUploadTickets)
     result map { unit =>
       Json.obj("complete" -> true)
     }
@@ -121,8 +129,11 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
       val xml = response.xml
       val multipartUploadList = ListBuffer[MultipartUpload]()
       multipartUploadList ++= (xml \ "Upload").map(n => {
-        // FIXME replace Date
-        MultipartUpload((n \ "Key").text, (n \ "UploadId").text, new Date())
+        MultipartUpload(
+          (n \ "Key").text,
+          (n \ "UploadId").text,
+          new Date(simpleDateFormat.parse((n \ "Initiated").text).getTime)
+        )
       })
 
       Json.toJson(multipartUploadList.toList)
@@ -148,8 +159,12 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
       val xml = response.xml
       val partList = ListBuffer[Part]()
       partList ++= (xml \ "Part").map(n => {
-        // FIXME replace Date
-        Part((n \ "PartNumber").text.toInt, (n \ "ETag").text, (n \ "Size").text.toDouble, new Date())
+        Part(
+          (n \ "PartNumber").text.toInt,
+          (n \ "ETag").text,
+          (n \ "Size").text.toDouble,
+          new Date(simpleDateFormat.parse((n \ "LastModified").text).getTime)
+        )
       })
 
       Json.toJson(partList)

@@ -1,6 +1,7 @@
 package me.mig.neith.controllers
 
 import fly.play.s3.S3Exception
+import me.mig.neith.constants.ErrorCodes
 import me.mig.neith.exceptions.NeithException
 import play.api.Logger
 import play.api.libs.json._
@@ -34,14 +35,11 @@ trait BaseController extends Controller {
             "message" -> Json.toJson(e.getMessage)
           )))
         case _: Exception =>
-          InternalServerError
+          InternalServerError(Json.obj("error" -> Json.obj(
+            "errno" -> Json.toJson(ErrorCodes.UNKNOWN_ERROR.errorCode),
+            "message" -> Json.toJson(ErrorCodes.UNKNOWN_ERROR.message)
+          )))
       }
   }
 
-  def packFromExternalRestResponse[T: TypeTag : Reads : Writes](resp: WSResponse): Result = {
-    Logger.info(s"WSResponse RESULT: " + resp)
-    resp.status match {
-      case _ => Status(resp.status)(resp.body)
-    }
-  }
 }
