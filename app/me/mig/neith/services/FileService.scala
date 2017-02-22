@@ -27,31 +27,50 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
   private val cdnDomain = config.getString("aws.s3.cdnDomain").getOrElse("b-img.cdn.mig.me")
   private val baseDomain = config.getString("aws.s3.baseDomain").getOrElse("s3-us-west-2.amazonaws.com")
   private val httpProtocol = config.getString("aws.s3.httpProtocol").getOrElse("http://")
+
   private val fileKey = "file"
+  private val s3 = S3.fromConfiguration(ws, config)
+  private val bucket = s3.getBucket(bucketName)
+  private val simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
 
-  val s3 = S3.fromConfiguration(ws, config)
-  val bucket = s3.getBucket(bucketName)
-  val simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-
+  /**
+    * Upload single file
+    *
+    * @param userId
+    * @param uploadFile
+    * @return
+    */
   def upload(userId: Int, uploadFile: MultipartFormData[Files.TemporaryFile]): Future[JsValue] = {
     import java.nio.file.{Files, Paths}
     uploadFile.file(fileKey)
       .filter(_.ref.file.length() > 0)
       .map(file => {
-        val byteArray = Files.readAllBytes(Paths.get(file.ref.file.getPath))
-        val name = ImageUtils.calculatePath(userId)
-        val result = bucket + BucketFile(name, file.contentType.get, byteArray)
-        result map { unit =>
-          val fileUrl = httpProtocol + baseDomain + "/" + bucketName + "/" + name
-          Json.obj(
-            "fileUrl" -> fileUrl
-          )
+        ImageUtils.ALLOW_MIME_TYPE contains file.contentType.get match {
+          case true => {
+            val byteArray = Files.readAllBytes(Paths.get(file.ref.file.getPath))
+            val name = ImageUtils.calculatePath(userId)
+            val result = bucket + BucketFile(name, file.contentType.get, byteArray)
+            result map { unit =>
+              val fileUrl = httpProtocol + baseDomain + "/" + bucketName + "/" + name
+              Json.obj(
+                "fileUrl" -> fileUrl
+              )
+            }
+          }
+          case false => Future.failed(new NeithException(ErrorCodes.UNSUPPORTED_MIME_TYPE.errorCode, ErrorCodes.UNSUPPORTED_MIME_TYPE.message))
         }
       }).getOrElse({
         Future.failed(new NeithException(ErrorCodes.FILE_NOT_FOUND.errorCode, ErrorCodes.FILE_NOT_FOUND.message))
       })
   }
 
+  /**
+    * Initiate a multupart upload id to handle upload
+    *
+    * @param userId
+    * @param file
+    * @return
+    */
   def initiateMultipartUpload(userId: Int, file: InitiateMultipartUpload): Future[JsValue] = {
     val result = bucket.initiateMultipartUpload(BucketFile(file.fileName, file.contentType))
     result map { bucketFileUploadTicket =>
@@ -63,7 +82,8 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
   }
 
   /**
-    * Minimun upload size 5MB
+    * Upload part of file
+    *
     * @param userId
     * @param data
     * @return
@@ -73,24 +93,36 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
     val formDataMap = data.dataParts
     data.file(fileKey).filter(_.ref.file.length() > 0) match {
       case Some(file) => {
-        var dataPartNumber: Int = formDataMap("dataPartNumber").head.toInt
-        var fileName = formDataMap("fileName").head
-        var uploadId = formDataMap("uploadId").head
-        val byteArray = Files.readAllBytes(Paths.get(file.ref.file.getPath))
-
-        val result = bucket.uploadPart(new BucketFileUploadTicket(fileName, uploadId), new BucketFilePart(dataPartNumber, byteArray))
-        result map { bucketFilePartUploadTicket =>
-          Logger.info("UPLOAD_PART RESULT: " + bucketFilePartUploadTicket)
-          Json.obj(
-            "partNumber" -> bucketFilePartUploadTicket.partNumber,
-            "eTag" -> bucketFilePartUploadTicket.eTag
-          )
+        ImageUtils.ALLOW_MIME_TYPE contains file.contentType.get match {
+          case true => {
+            var dataPartNumber: Int = formDataMap ("dataPartNumber").head.toInt
+            var fileName = formDataMap ("fileName").head
+            var uploadId = formDataMap ("uploadId").head
+            val byteArray = Files.readAllBytes (Paths.get (file.ref.file.getPath) )
+            val result = bucket.uploadPart (new BucketFileUploadTicket (fileName, uploadId), new BucketFilePart (dataPartNumber, byteArray) )
+            result map {
+              bucketFilePartUploadTicket =>
+              Logger.info ("UPLOAD_PART RESULT: " + bucketFilePartUploadTicket)
+              Json.obj (
+                "partNumber" -> bucketFilePartUploadTicket.partNumber,
+                "eTag" -> bucketFilePartUploadTicket.eTag
+                )
+            }
+          }
+          case false => Future.failed(new NeithException(ErrorCodes.UNSUPPORTED_MIME_TYPE.errorCode, ErrorCodes.UNSUPPORTED_MIME_TYPE.message))
         }
       }
       case None => Future.failed(new NeithException(ErrorCodes.FILE_NOT_FOUND.errorCode, ErrorCodes.FILE_NOT_FOUND.message))
     }
   }
 
+  /**
+    * Complete upload, minimum size 5MB
+    *
+    * @param userId
+    * @param data
+    * @return
+    */
   def completeMultipartUpload(userId: Int, data: CompleteMultipartUpload): Future[JsValue] = {
     println(s"${data.fileName}, ${data.uploadId}, ${data.partUploadTickets}")
     val result = bucket.completeMultipartUpload(
@@ -100,6 +132,14 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
     }
   }
 
+  /**
+    * Abort upload
+    *
+    * @param userId
+    * @param fileName
+    * @param uploadId
+    * @return
+    */
   def abortMultipartUpload(userId: Int, fileName: String, uploadId: String): Future[JsValue] = {
     val result = bucket.abortMultipartUpload(
       new BucketFileUploadTicket(fileName, uploadId))
@@ -108,6 +148,16 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
     }
   }
 
+  /**
+    * List all uploads
+    *
+    * @param userId
+    * @param fileName
+    * @param uploadId
+    * @param maxUploads
+    * @param delimiter
+    * @return
+    */
   def listMultipartUploads(userId: Int, fileName: String, uploadId: String, maxUploads: Int, delimiter: String): Future[JsValue] = {
     val acl = PUBLIC_READ
     val headers = (Map.empty).toList
@@ -140,6 +190,16 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
     }
   }
 
+  /**
+    * List upload parts
+    *
+    * @param userId
+    * @param fileName
+    * @param uploadId
+    * @param maxParts
+    * @param partNumber
+    * @return
+    */
   def listParts(userId: Int, fileName: String, uploadId: String, maxParts: Int, partNumber: Int): Future[JsValue] = {
     val acl = PUBLIC_READ
     val headers = (Map.empty).toList

@@ -5,7 +5,6 @@ import me.mig.neith.constants.ErrorCodes
 import me.mig.neith.exceptions.NeithException
 import play.api.Logger
 import play.api.libs.json._
-import play.api.libs.ws.WSResponse
 import play.api.mvc._
 
 import scala.reflect.runtime.universe._
@@ -25,10 +24,20 @@ trait BaseController extends Controller {
       Logger.error("Exception occurred:", ex)
       ex match {
         case e: NeithException =>
-          BadRequest(Json.obj("error" -> Json.obj(
-            "errno" -> Json.toJson(e.errorCode),
-            "message" -> Json.toJson(e.getMessage)
-          )))
+          e.errorCode match {
+            case ErrorCodes.UNSUPPORTED_MIME_TYPE.errorCode => {
+              UnsupportedMediaType(Json.obj("error" -> Json.obj(
+                "errno" -> Json.toJson(e.errorCode),
+                "message" -> Json.toJson(e.getMessage)
+              )))
+            }
+            case _ => {
+              BadRequest(Json.obj("error" -> Json.obj(
+                "errno" -> Json.toJson(e.errorCode),
+                "message" -> Json.toJson(e.getMessage)
+              )))
+            }
+          }
         case e: S3Exception =>
           BadRequest(Json.obj("error" -> Json.obj(
             "errno" -> Json.toJson(e.code),
