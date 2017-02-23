@@ -9,7 +9,7 @@ class ImageUtilsTest extends FlatSpec with Matchers {
 
   val USER_ID = 195711006
   val FILE_PATH = "test/resources/test.jpeg"
-  val TEMPFILE_PATH = "test/resources/file.jpeg"
+  val TEMPFILE_PATH = "test/resources/template.jpeg"
 
   "An image calculated path" should "parse" in {
     val calculatePath = ImageUtils.calculatePath(USER_ID)

@@ -3,6 +3,7 @@ package me.mig.neith.controllers
 import fly.play.s3.S3Exception
 import me.mig.neith.constants.ErrorCodes
 import me.mig.neith.exceptions.NeithException
+import me.mig.playcommon.controllers.UsersBaseController
 import play.api.Logger
 import play.api.libs.json._
 import play.api.mvc._
@@ -12,14 +13,14 @@ import scala.reflect.runtime.universe._
 /**
   * Created by phyrextsai on 2017/2/10.
   */
-trait BaseController extends Controller {
+trait BaseController extends UsersBaseController {
 
   def processGeneralResponse[T: TypeTag : Reads : Writes](result: JsValue): Result = {
     Logger.info(s"RESULT: ${result}")
     Ok(result).as("application/json")
   }
 
-  def processErrorResponse: PartialFunction[Throwable, Result] = {
+  override def processErrorResponse: PartialFunction[Throwable, Result] = {
     case ex: Throwable =>
       Logger.error("Exception occurred:", ex)
       ex match {

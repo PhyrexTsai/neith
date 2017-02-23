@@ -29,6 +29,7 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
   val FILE_PATH = "test/resources/test.jpeg"
   val TEMP_FILE_PATH = "test/resources/file.jpeg"
   val PART_FILE_PATH = "test/resources/part.jpeg"
+  val SESSION_ID = "SESSION_ID"
 
   override def before(): Unit = {
     import java.io.{File,FileInputStream,FileOutputStream}
@@ -77,7 +78,7 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       val formData = MultipartFormData(dataParts = Map(), files = Seq(part), badParts = Seq())
       val body = new AnyContentAsMultipartFormData(formData)
       val request = FakeRequest(PUT, s"/v1/users/${USER_ID}/upload").withHeaders(
-        ("sessionId", "SESSION_ID"),
+        ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       ).withMultipartFormDataBody(formData)
       val result = route(request)(MultipartFormDataWritable.anyContentAsMultipartFormWritable).get
@@ -92,7 +93,10 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       val part = FilePart[TemporaryFile](key = "ErrorKey", filename = FILE_NAME, contentType = Some(MIME_TYPE), ref = tempFile)
       val formData = MultipartFormData(dataParts = Map(), files = Seq(part), badParts = Seq())
       val body = new AnyContentAsMultipartFormData(formData)
-      val request = FakeRequest(PUT, s"/v1/users/${USER_ID}/upload").withMultipartFormDataBody(formData)
+      val request = FakeRequest(PUT, s"/v1/users/${USER_ID}/upload").withHeaders(
+        ("sessionId", SESSION_ID),
+        ("x-forwarded-for", "8.8.8.8")
+      ).withMultipartFormDataBody(formData)
       val result = route(request)(MultipartFormDataWritable.anyContentAsMultipartFormWritable).get
 
       status(result) must equalTo(BAD_REQUEST)
@@ -105,7 +109,10 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
         "fileName" -> FILE_NAME,
         "contentType" -> MIME_TYPE
       )
-      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/initiateMultipartUpload").withJsonBody(body)
+      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/initiateMultipartUpload").withHeaders(
+        ("sessionId", SESSION_ID),
+        ("x-forwarded-for", "8.8.8.8")
+      ).withJsonBody(body)
       val result = route(request).get
 
       status(result) must equalTo(OK)
@@ -120,7 +127,10 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       val part = FilePart[TemporaryFile](key = "file", filename = PART_FILE_NAME, contentType = Some(MIME_TYPE), ref = partFile)
       val formData = MultipartFormData(dataParts = Map(("fileName", Seq(FILE_NAME)), ("uploadId", Seq(PART_UPLOAD_ID)), ("dataPartNumber", Seq("1"))), files = Seq(part), badParts = Seq())
       val body = new AnyContentAsMultipartFormData(formData)
-      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/uploadPart").withMultipartFormDataBody(formData)
+      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/uploadPart").withHeaders(
+        ("sessionId", SESSION_ID),
+        ("x-forwarded-for", "8.8.8.8")
+      ).withMultipartFormDataBody(formData)
       val result = route(request)(MultipartFormDataWritable.anyContentAsMultipartFormWritable).get
 
       status(result) must equalTo(OK)
@@ -142,7 +152,10 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
             "eTag" -> "")
           )
         )
-      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/completeMultipartUpload").withJsonBody(body)
+      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/completeMultipartUpload").withHeaders(
+        ("sessionId", SESSION_ID),
+        ("x-forwarded-for", "8.8.8.8")
+      ).withJsonBody(body)
       val result = route(request).get
 
       status(result) must equalTo(BAD_REQUEST)
@@ -152,7 +165,10 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
     }
 
     "abort multipart upload on DELETE /v1/users/:userId/abortMultipartUpload" in new WithApplication {
-      val request = FakeRequest(DELETE, s"/v1/users/${USER_ID}/abortMultipartUpload?fileName=${FILE_NAME}&uploadId=${ABORT_UPLOAD_ID}")
+      val request = FakeRequest(DELETE, s"/v1/users/${USER_ID}/abortMultipartUpload?fileName=${FILE_NAME}&uploadId=${ABORT_UPLOAD_ID}").withHeaders(
+        ("sessionId", SESSION_ID),
+        ("x-forwarded-for", "8.8.8.8")
+      )
       val result = route(request).get
 
       status(result) must equalTo(OK)
@@ -161,7 +177,10 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
     }
 
     "list multipart upload on GET /v1/users/:userId/listMultipartUploads" in new WithApplication {
-      val request = FakeRequest(GET, s"/v1/users/${USER_ID}/listMultipartUploads?uploadId=${UPLOAD_ID}&fileName=${FILE_NAME}")
+      val request = FakeRequest(GET, s"/v1/users/${USER_ID}/listMultipartUploads?uploadId=${UPLOAD_ID}&fileName=${FILE_NAME}").withHeaders(
+        ("sessionId", SESSION_ID),
+        ("x-forwarded-for", "8.8.8.8")
+      )
       val result = route(request).get
 
       status(result) must equalTo(OK)
@@ -170,7 +189,10 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
     }
 
     "get list part on GET /v1/users/:userId/listParts" in new WithApplication {
-      val request = FakeRequest(GET, s"/v1/users/${USER_ID}/listParts?fileName=${FILE_NAME}&uploadId=${PART_UPLOAD_ID}")
+      val request = FakeRequest(GET, s"/v1/users/${USER_ID}/listParts?fileName=${FILE_NAME}&uploadId=${PART_UPLOAD_ID}").withHeaders(
+        ("sessionId", SESSION_ID),
+        ("x-forwarded-for", "8.8.8.8")
+      )
       val result = route(request).get
 
       status(result) must equalTo(OK)
