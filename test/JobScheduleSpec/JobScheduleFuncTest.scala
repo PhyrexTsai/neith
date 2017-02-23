@@ -1,9 +1,9 @@
 package JobScheduleSpec
 
 import akka.stream.Materializer
+import me.mig.mars.models.JobModel.{CreateUpdateJob, CreateUpdateJobAck}
 import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.mysql.FusionDatabase
-import me.mig.mars.services.JobScheduleService.{CreateJob, CreateJobAck}
 import org.joda.time.DateTime
 import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
 import play.api.{Application, Logger}
@@ -21,8 +21,8 @@ import scala.concurrent.duration._
 class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
 
   implicit lazy val materializer: Materializer = app.materializer
-  implicit val CreateJobAckReads = Json.reads[CreateJobAck]
-  implicit val CreateJobWrites = Json.writes[CreateJob]
+  implicit val CreateUpdateJobAckReads = Json.reads[CreateUpdateJobAck]
+  implicit val CreateUpdateJobWrites = Json.writes[CreateUpdateJob]
 
   "RESTful POST /createJob" should {
     val fakeRequest = FakeRequest(POST, "/createJob")
@@ -32,12 +32,12 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       val interval = 2 minutes
       val result = route(app, fakeRequest
         .withJsonBody(
-          Json.toJson(CreateJob("TestJob", List(1), List(3, 6), startTime.getMillis, None, interval.toMillis, NotificationType.PUSH.toString, "job1", HashMap("web" -> "yes")))
+          Json.toJson(CreateUpdateJob("TestJob", "TestUser", None, Some(List(1)), Some(List(3, 6)), startTime.getMillis, None, Some(interval.toMillis), NotificationType.PUSH.toString, "job1", HashMap("web" -> "yes")))
         )
       ).get
 
       status(result) mustBe OK
-      contentAsJson(result).as[CreateJobAck].success mustBe true
+      contentAsJson(result).as[CreateUpdateJobAck].success mustBe true
     }
 
     "Got error with invalid json format" in {
@@ -52,7 +52,7 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       val interval = 1 minutes
       val result = route(app, fakeRequest
         .withJsonBody(
-          Json.toJson(CreateJob("TestInvalidJob", List(1), List(4, 8), startTime, None, interval.toMillis, "None", "job2", HashMap("hi" -> "five")))
+          Json.toJson(CreateUpdateJob("TestInvalidJob", "TestUser", None, Some(List(1)), Some(List(4, 8)), startTime, None, Some(interval.toMillis), "None", "job2", HashMap("hi" -> "five")))
         )
       ).get
 
@@ -71,7 +71,7 @@ class JobScheduleFuncTest extends PlaySpec with OneAppPerSuite {
       ))
 
       val fusionDb = Application.instanceCache[FusionDatabase].apply(app)
-      val results = Await.result(fusionDb.getUserTokensByLabelAndCountry(List(1), List(4, 8)), 15 seconds)
+      val results = Await.result(fusionDb.getUserTokensByLabelAndCountry(None, Some(List(1)), Some(List(4, 8))), 15 seconds)
       Logger.info("results: " + results)
     }
   }
