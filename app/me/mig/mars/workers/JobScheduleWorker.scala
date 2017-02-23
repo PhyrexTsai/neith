@@ -1,6 +1,7 @@
 package me.mig.mars.workers
 
 import java.sql.Timestamp
+import java.util.{NoSuchElementException, UUID}
 import javax.inject.{Inject, Named}
 
 import akka.actor.{Actor, ActorRef, ActorSystem}
@@ -8,12 +9,13 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import me.mig.mars.event.MarsCommand.RenewGcmToken
-import me.mig.mars.models.JobModel.{DispatchJob, Job, PushJob}
+import me.mig.mars.models.JobModel.{DispatchJob, Job, JobHistory, JobHistoryDetail, PushJob}
 import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.repositories.hive.HiveClient
 import me.mig.mars.repositories.mysql.FusionDatabase
 import me.mig.mars.services.JobScheduleService
+import me.mig.mars.workers.push.PushNotificationKafkaConsumer
 import play.api.{Configuration, Logger}
 
 import scala.concurrent.Future
@@ -22,7 +24,7 @@ import scala.concurrent.duration._
 /**
   * Created by jameshsiao on 11/22/16.
   */
-class JobScheduleWorker @Inject()(configuration: Configuration, implicit val system: ActorSystem, implicit val materializer: Materializer, implicit val db: FusionDatabase, implicit val keyspace: MarsKeyspace, @Named("PushNotificationKafkaProducer") pushNotificationKafkaProducer: ActorRef, hiveClient: HiveClient) extends Actor {
+class JobScheduleWorker @Inject()(configuration: Configuration, implicit val system: ActorSystem, implicit val materializer: Materializer, implicit val db: FusionDatabase, implicit val keyspace: MarsKeyspace, @Named("PushNotificationKafkaProducer") pushNotificationKafkaProducer: ActorRef, pushNotificationKafkaConsumer: PushNotificationKafkaConsumer, hiveClient: HiveClient) extends Actor {
   private final val ONE_DAY: Long = 86400000
 
   implicit val executeContext = materializer.executionContext
@@ -43,6 +45,12 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
           jobList.head
         })
         .mapAsync(2) { job2dispatch =>
+          // Create the job history
+          keyspace.createUpdateJobHistory(
+            JobHistory(job2dispatch.id, job2dispatch.creator, job2dispatch.users, job2dispatch.label, job2dispatch.country,
+              job2dispatch.startTime, job2dispatch.endTime, job2dispatch.interval, job2dispatch.notificationType,
+              job2dispatch.message, job2dispatch.callToAction, job2dispatch.createdTime, 0)
+          )
           // No interval and endTime set, only schedule once
           if (job2dispatch.interval.isEmpty && job2dispatch.endTime.isEmpty) {
             // TODO: Need to check if job has been canceled and removed successfully
@@ -64,14 +72,39 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
             }
           }
         }
-        .mapConcat(_.toList)
+        .mapConcat { tokens =>
+          Logger.debug("Total user tokens found: " + tokens.length)
+          if (tokens.length > 0) {
+            keyspace.updateJobHistoryUsers(tokens.head.jobId, tokens.head.startTime, tokens.map(_.username.get).distinct.toList, tokens.length)
+            tokens.toList
+          } else throw new NoSuchElementException("No tokens found to push")
+        }
         .map { pushJob =>
           Logger.debug("pushJobs: " + pushJob)
-          Logger.info("job with tokens: " + pushJob)
-          // Publishing to job queue(Kafka) ready for consuming.
-          pushNotificationKafkaProducer ! pushJob
-        }.runWith(Sink.ignore)
+          (pushJob.gcmToken, pushJob.iosToken) match {
+            case (None, None) => Some(pushJob)
+            case _ =>
+              // Publishing to job queue(Kafka) ready for consuming.
+              pushNotificationKafkaProducer ! pushJob
+              None
+          }
+        }
+        .map {
+          case Some(pushJob) =>
+            Logger.info("No tokens for user " + pushJob.username.get + " to push, mark as failed")
+            // Increase failed count in the record
+            keyspace.updateJobHistoryFailureCount(pushJob.jobId, pushJob.startTime)
+            // Record detail
+            keyspace.createUpdateJobHistoryDetail(JobHistoryDetail(pushJob.jobId, pushJob.startTime, pushJob.username.get, false, "", "null "+UUID.randomUUID(), None, "No tokens found"))
+          case _ =>
+            // No username passed means sent tokens to push.
+            // Start consumer streams standby
+            pushNotificationKafkaConsumer.assign(job.jobId)
+        }
+        .runWith(Sink.ignore)
         .recover {
+          case ex: NoSuchElementException =>
+            Logger.error("Dipatching job encounters error: " + ex.getMessage)
           case ex => Logger.error("Dispatching job encounters error: " + ex.getMessage)
         }
 
@@ -118,7 +151,7 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
       case NotificationType.PUSH =>
         if (hiveClient.isExist) {
           Logger.debug("Use Hive to query")
-          Source(hiveClient.getScheduledJobUsers(job.label, job.country)).mapAsync(10) { user =>
+          Source(hiveClient.getScheduledJobUsers(job.users, job.label, job.country)).mapAsync(10) { user =>
             Logger.debug("user to push: " + user)
             for {
               gcmTokens <- db.getGcmRegToken(user._1)
@@ -128,13 +161,18 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
               Logger.debug("iosTokens: " + iosTokens)
               val userTokens: Seq[PushJob] = gcmTokens.zipAll(iosTokens, null, null).map {
                 case (gcmToken, iosToken) =>
-                  PushJob(job.id, user._1, job.message, Some(job.callToAction), Some(user._3),
+                  PushJob(job.id, job.startTime, user._1, job.message, Some(job.callToAction), Some(user._2),
                     if (gcmToken != null) Some(gcmToken.token) else None,
                     if (iosToken != null) Some(iosToken.deviceToken) else None
                   )
               }
+              // Assign the element even if no tokens found for the user, this is for recording the job detail for the following process.
+              val tokensToPush = if (userTokens isEmpty) {
+                Seq( PushJob(job.id, job.startTime, user._1, job.message, Some(job.callToAction), Some(user._2), None, None) )
+              } else userTokens
               Logger.debug("userTokens(" + user._1 + "): " + userTokens.toString())
-              userTokens
+              tokensToPush
+              // Record the
             }
           }.runFold(Seq[PushJob]())(_ ++ _).recover {
             case ex: Throwable =>
@@ -143,9 +181,9 @@ class JobScheduleWorker @Inject()(configuration: Configuration, implicit val sys
           }
         } else {
           Logger.debug("Use mysql to query")
-          db.getUserTokensByLabelAndCountry(job.label, job.country).map(
+          db.getUserTokensByLabelAndCountry(job.users, job.label, job.country).map(
             tokens => {
-              tokens.map(token => PushJob(job.id, token._1, job.message, Some(job.callToAction), token._2, token._3, token._4))
+              tokens.map(token => PushJob(job.id, job.startTime, token._1.get, job.message, Some(job.callToAction), token._2, token._3, token._4))
             }
           )
         }
