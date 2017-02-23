@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import me.mig.mars.ErrorHandler
-import me.mig.mars.models.JobModel.{CreateUpdateJob, CreateUpdateJobAck, DeleteJobAck, GetJobsAck}
+import me.mig.mars.models.JobModel.{CreateUpdateJob, CreateUpdateJobAck, DeleteJobAck, GetJobHistoryAck, GetJobsAck}
 import me.mig.mars.models.NotificationModel.GetNotificationTypesAck
 import me.mig.mars.services.JobScheduleService
 import me.mig.mars.workers.push.PushNotificationWorker
@@ -27,7 +27,7 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
     */
   def createUpdateJob = Action.async(ErrorHandler.validateJson[CreateUpdateJob]) { request =>
     Source.single(request.body)
-      .via(jobScheduleService.createUpdateJob)
+      .via(jobScheduleService.createUpdateJob())
       .runWith(Sink.head)
       .map( result => Ok(Json.toJson(result)) )
       .recover {
@@ -47,7 +47,7 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
     */
   def getJobs(id: String, page: Option[Int], pageSize: Option[Int]) = Action.async { request =>
     Source.single(id)
-      .via(jobScheduleService.getJobs)
+      .via(jobScheduleService.getJobs())
       .runWith(Sink.head)
       .map( result => Ok(Json.toJson(result)) )
       .recover {
@@ -59,12 +59,24 @@ class JobScheduleController @Inject()(jobScheduleService: JobScheduleService, sy
 
   def deleteJob(id: String) = Action.async { request =>
     Source.single(id)
-      .via(jobScheduleService.deleteJob)
+      .via(jobScheduleService.deleteJob())
       .runWith(Sink.head)
       .map( result => Ok(Json.toJson(result)) )
       .recover {
         case x: Throwable => BadRequest(
           Json.toJson( DeleteJobAck(false, Some("Deleting job [" + id + "] encounters error: " + x.getMessage)) )
+        )
+      }
+  }
+
+  def getJobHistory(id: String) = Action.async { request =>
+    Source.single(id)
+      .via(jobScheduleService.getJobHistory())
+      .runWith(Sink.head)
+      .map( result => Ok(Json.toJson(result)) )
+      .recover {
+        case ex: Throwable => BadRequest(
+          Json.toJson(GetJobHistoryAck(List.empty, Some("Getting job[" + id + "] history encounters error: " + ex.getMessage)))
         )
       }
   }
