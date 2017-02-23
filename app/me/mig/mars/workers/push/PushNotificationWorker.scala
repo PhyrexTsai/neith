@@ -9,7 +9,8 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.sns.AmazonSNSClient
 import com.amazonaws.services.sns.model._
-import me.mig.mars.models.JobModel.PushJob
+import me.mig.mars.models.JobModel.{JobHistoryDetail, PushJob}
+import me.mig.mars.repositories.cassandra.MarsKeyspace
 import me.mig.mars.workers.push.PushNotificationWorker._
 import org.apache.commons.codec.binary.Hex
 import play.api.libs.json._
@@ -18,7 +19,7 @@ import play.api.{Configuration, Logger}
 /**
   * Created by jameshsiao on 12/27/16.
   */
-class PushNotificationWorker @Inject()(configuration: Configuration) extends Actor {
+class PushNotificationWorker @Inject()(configuration: Configuration, keyspace: MarsKeyspace) extends Actor {
   private val snsClient = new AmazonSNSClient(
     new BasicAWSCredentials(
       configuration.getString(ACCESS_KEY).getOrElse(""),
@@ -66,9 +67,7 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
   private def registerWithSns(platformToken: String, platformApplicationArn: String): String = {
     var updateNeeded = false
     var createNeeded = false
-    var endpointArn: String = createPlatformEndpoint(
-//      "CustomData - Useful to store endpoint specific data",
-      platformToken, platformApplicationArn)
+    var endpointArn: String = createPlatformEndpoint(platformToken, platformApplicationArn)
 
     try {
       Logger.warn("getEndpointAttributesRequest")
@@ -89,9 +88,7 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
     }
 
     if (createNeeded) {
-      endpointArn = createPlatformEndpoint(
-//        "CustomData - Useful to store endpoint specific data",
-        platformToken, platformApplicationArn)
+      endpointArn = createPlatformEndpoint(platformToken, platformApplicationArn)
     }
 
     if (updateNeeded) {
@@ -137,15 +134,52 @@ class PushNotificationWorker @Inject()(configuration: Configuration) extends Act
         if (pushJob.gcmToken.nonEmpty) {
           val gcmEndpoint = registerWithSns(pushJob.gcmToken.get, gcmApplicationArn.get)
           publish(toGcmMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message, pushJob.userId, pushJob.username.getOrElse("")), gcmEndpoint)
+          // Record success
+          keyspace.updateJobHistorySuccessCount(pushJob.jobId, pushJob.startTime)
+          // Record detail
+          keyspace.createUpdateJobHistoryDetail(JobHistoryDetail(pushJob.jobId, pushJob.startTime, pushJob.username.get, true, Platform.ANDROID.toString, pushJob.gcmToken.get, Some(gcmEndpoint), null))
         }
         if (pushJob.iosToken.nonEmpty) {
-          val apnsEndpoint = registerWithSns(Hex.encodeHexString(pushJob.iosToken.get), apnsApplicationArn.get)
+          val iosTokenString = Hex.encodeHexString(pushJob.iosToken.get)
+          val apnsEndpoint = registerWithSns(iosTokenString, apnsApplicationArn.get)
           publish(toApnsMessage(generateCallToAction(pushJob.callToAction.getOrElse(Map("type" -> "post"))), pushJob.message, pushJob.userId, pushJob.username.getOrElse("")), apnsEndpoint)
+          // Record success
+          keyspace.updateJobHistorySuccessCount(pushJob.jobId, pushJob.startTime)
+          // Record detail
+          keyspace.createUpdateJobHistoryDetail(JobHistoryDetail(pushJob.jobId, pushJob.startTime, pushJob.username.get, false, Platform.IOS.toString, iosTokenString, Some(apnsEndpoint), null))
         }
       }
       catch {
         case ex: EndpointDisabledException =>
           Logger.warn("Disabled endpoint: " + ex.getMessage + ", should be removed??")
+          val p: Pattern = Pattern
+            .compile(".*Endpoint is disabled (.*Request ID: .*) already exists " +
+              "with the same Token.*")
+          val m: Matcher = p.matcher(ex.getErrorMessage)
+          if (m.matches()) {
+            Logger.warn("EndpointDisabledException matching pattern: " + m.group(1))
+          }
+
+          // Record failure
+          keyspace.updateJobHistoryFailureCount(pushJob.jobId, pushJob.startTime)
+          // Record detail
+          keyspace.createUpdateJobHistoryDetail(
+            JobHistoryDetail(pushJob.jobId, pushJob.startTime, pushJob.username.get, false,
+              if (pushJob.iosToken nonEmpty) Platform.IOS.toString else if (pushJob.gcmToken nonEmpty) Platform.ANDROID.toString else "",
+              if (pushJob.iosToken nonEmpty) Hex.encodeHexString(pushJob.iosToken.get) else pushJob.gcmToken.getOrElse(""),
+              None, ex.getStackTrace.toString))
+        case ex: Throwable =>
+          Logger.warn("Publishing push notification encounters error: " + ex.getMessage)
+          // Record failure
+          keyspace.updateJobHistoryFailureCount(pushJob.jobId, pushJob.startTime)
+          // Record detail
+          keyspace.createUpdateJobHistoryDetail(
+            JobHistoryDetail(
+              pushJob.jobId, pushJob.startTime, pushJob.username.get, false,
+              if (pushJob.iosToken nonEmpty) Platform.IOS.toString else if (pushJob.gcmToken nonEmpty) Platform.ANDROID.toString else "",
+              if (pushJob.iosToken nonEmpty) Hex.encodeHexString(pushJob.iosToken.get) else pushJob.gcmToken.getOrElse(""),
+              None, ex.getStackTrace.toString)
+          )
       }
     case _ => Logger.warn("Unsupported event")
   }
@@ -161,6 +195,13 @@ object PushNotificationWorker {
 
   final val GCM_ARN = "push.gcm.snsArn"
   final val APNS_ARN = "push.apns.snsArn"
+
+  object Platform extends Enumeration {
+    type Platform = Value
+
+    val ANDROID = Value("Android")
+    val IOS = Value("iOS")
+  }
 
   // TODO: Might be common function ?
   // TODO: Create Enumeration
