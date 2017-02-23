@@ -1,0 +1,564 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is for neith file upload service.\n\n**Environments**:\n- QALAB: http://qalab.projectgoth.com/api/neith\n- STG:   http://migme.stg.projectgoth.com/api/neith\n- PROD:  http://mig.me/api/neith",
+        "contact": {
+            "name": "server team",
+            "url": "http://mig.me/",
+            "email": "serverteam@mig.me"
+        },
+        "termsOfService": "",
+        "version": "1.0",
+        "title": "Solar Microservices"
+    },
+    "tags": [
+        {
+            "name": "Health"
+        },
+        {
+            "name": "Users"
+        }
+    ],
+    "host": "qalab.projectgoth.com",
+    "basePath": "/api/neith",
+    "schemes": [
+        "http"
+    ],
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "Check neith service available",
+                "tags": [
+                    "Health"
+                ],
+                "schemes": [
+                    "http"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Neith service health check",
+                "responses": {
+                    "200": {
+                        "description": "Service is available"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/upload": {
+            "put": {
+                "description": "Upload file",
+                "tags": [
+                    "Users"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "User Id",
+                        "default": 195500745,
+                        "type": "integer",
+                        "required": true
+                    },
+                    {
+                        "name": "sessionId",
+                        "in": "header",
+                        "description": "Session ID for validation",
+                        "default": "wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "file",
+                        "in": "formData",
+                        "description": "Upload file",
+                        "type": "file",
+                        "required": true
+                    }
+                ],
+                "summary": "Upload file",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/UploadResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/initiateMultipartUpload": {
+            "post": {
+                "description": "Initiate multipart upload",
+                "tags": [
+                    "Users"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "User Id",
+                        "default": 195500745,
+                        "type": "integer",
+                        "required": true
+                    },
+                    {
+                        "name": "sessionId",
+                        "in": "header",
+                        "description": "Session ID for validation",
+                        "default": "wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "body",
+                        "in": "body",
+                        "description": "request body",
+                        "schema": {
+                            "$ref": "#/definitions/InitiateMultipartUpload"
+                        },
+                        "required": true
+                    }
+                ],
+                "summary": "Initiate multipart upload",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/InitiateMultipartUploadResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/uploadPart": {
+            "post": {
+                "description": "Upload part",
+                "tags": [
+                    "Users"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "User Id",
+                        "default": 195500745,
+                        "type": "integer",
+                        "required": true
+                    },
+                    {
+                        "name": "sessionId",
+                        "in": "header",
+                        "description": "Session ID for validation",
+                        "default": "wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "file",
+                        "in": "formData",
+                        "description": "Upload file",
+                        "type": "file",
+                        "required": true
+                    },
+                    {
+                        "name": "dataPartNumber",
+                        "in": "formData",
+                        "description": "Data part number",
+                        "type": "integer",
+                        "required": true
+                    },
+                    {
+                        "name": "fileName",
+                        "in": "formData",
+                        "description": "File name",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "uploadId",
+                        "in": "formData",
+                        "description": "Upload Id",
+                        "type": "string",
+                        "required": true
+                    }
+                ],
+                "summary": "Initiate multipart upload",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/completeMultipartUpload": {
+            "post": {
+                "description": "Initiate multipart upload",
+                "tags": [
+                    "Users"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "User Id",
+                        "default": 195500745,
+                        "type": "integer",
+                        "required": true
+                    },
+                    {
+                        "name": "sessionId",
+                        "in": "header",
+                        "description": "Session ID for validation",
+                        "default": "wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "body",
+                        "in": "body",
+                        "description": "request body",
+                        "schema": {
+                            "$ref": "#/definitions/CompleteMultipartUpload"
+                        },
+                        "required": true
+                    }
+                ],
+                "summary": "Initiate multipart upload",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/abortMultipartUpload": {
+            "delete": {
+                "description": "Abort multipart upload",
+                "tags": [
+                    "Users"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "User Id",
+                        "default": 195500745,
+                        "type": "integer",
+                        "required": true
+                    },
+                    {
+                        "name": "sessionId",
+                        "in": "header",
+                        "description": "Session ID for validation",
+                        "default": "wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "fileName",
+                        "in": "query",
+                        "description": "file name",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "uploadId",
+                        "in": "query",
+                        "description": "upload id",
+                        "type": "string",
+                        "required": true
+                    }
+                ],
+                "summary": "Abort multipart upload",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/listParts": {
+            "get": {
+                "description": "List upload parts",
+                "tags": [
+                    "Users"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "User Id",
+                        "default": 195500745,
+                        "type": "integer",
+                        "required": true
+                    },
+                    {
+                        "name": "sessionId",
+                        "in": "header",
+                        "description": "Session ID for validation",
+                        "default": "wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "fileName",
+                        "in": "query",
+                        "description": "file name",
+                        "type": "string",
+                        "required": true,
+                        "default": "migme.jpg"
+                    },
+                    {
+                        "name": "uploadId",
+                        "in": "query",
+                        "description": "upload id",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "maxParts",
+                        "in": "query",
+                        "description": "max parts",
+                        "type": "integer",
+                        "required": false,
+                        "default": 3
+                    },
+                    {
+                        "name": "partNumbers",
+                        "in": "query",
+                        "description": "part numbers",
+                        "type": "integer",
+                        "required": false,
+                        "default": 0
+                    }
+                ],
+                "summary": "List upload parts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/Part"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/listMultipartUploads": {
+            "get": {
+                "description": "List multipart uploads",
+                "tags": [
+                    "Users"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "User Id",
+                        "default": 195500745,
+                        "type": "integer",
+                        "required": true
+                    },
+                    {
+                        "name": "sessionId",
+                        "in": "header",
+                        "description": "Session ID for validation",
+                        "default": "wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "fileName",
+                        "in": "query",
+                        "description": "file name",
+                        "type": "string",
+                        "required": true,
+                        "default": "migme.jpg"
+                    },
+                    {
+                        "name": "uploadId",
+                        "in": "query",
+                        "description": "upload id",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "maxUploads",
+                        "in": "query",
+                        "description": "max uploads",
+                        "type": "integer",
+                        "required": false,
+                        "default": 10
+                    },
+                    {
+                        "name": "delimiter",
+                        "in": "query",
+                        "description": "delimiter",
+                        "type": "string",
+                        "required": false
+                    }
+                ],
+                "summary": "List multipart uploads",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "UploadResp": {
+            "type": "object",
+            "properties": {
+                "fileUrl": {
+                    "type": "string"
+                }
+            }
+        },
+        "InitiateMultipartUpload": {
+            "type": "object",
+            "properties": {
+                "fileName": {
+                    "type": "string",
+                    "default": "migme.jpg"
+                },
+                "contentType": {
+                    "type": "string",
+                    "default": "image/jpeg"
+                }
+            }
+        },
+        "InitiateMultipartUploadResp": {
+            "type": "object",
+            "properties": {
+                "fileName": {
+                    "type": "string",
+                    "default": "migme.jpg"
+                },
+                "uploadId": {
+                    "type": "string"
+                }
+            }
+        },
+        "CompleteMultipartUpload": {
+            "type": "object",
+            "properties": {
+                "fileName": {
+                    "type": "string"
+                },
+                "uploadId": {
+                    "type": "string"
+                },
+                "partUploadTickets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/BucketFilePartUploadTicket"
+                    }
+                }
+            }
+        },
+        "BucketFilePartUploadTicket": {
+            "type": "object",
+            "properties": {
+                "partNumber": {
+                    "type": "integer"
+                },
+                "eTag": {
+                    "type": "string"
+                }
+            }
+        },
+        "Part": {
+            "type": "object",
+            "properties": {
+                "partNumber": {
+                    "type": "integer"
+                },
+                "eTag": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "number",
+                    "format": "double"
+                },
+                "lastModified": {
+                    "type": "string",
+                    "format": "date"
+                }
+            }
+        }
+    }
+}
