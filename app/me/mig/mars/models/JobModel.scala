@@ -51,6 +51,22 @@ object JobModel {
                                startTime: Timestamp,
                                successCount: Long,
                                failureCount: Long)
+  case class JobFullHistory(id: String,
+                            creator: String,
+                            users: Option[List[String]] = None,
+                            label: Option[List[Short]] = None,
+                            country: Option[List[Int]] = None,
+                            startTime: Timestamp,
+                            endTime: Option[Timestamp],
+                            interval: Option[Long],
+                            notificationType: String,
+                            message: String,
+                            callToAction: Map[String, String],
+                            createdTime: Timestamp,
+                            totalCount: Long,
+                            successCount: Long,
+                            failureCount: Long,
+                            detail: List[JobHistoryDetail])
 
   /** Event models **/
   case class ScheduleJob(jobId: String)
@@ -73,6 +89,7 @@ object JobModel {
   // Responses
   case class CreateUpdateJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
   case class GetJobsAck(data: List[Job], override val error: Option[String] = None) extends BaseResponse
+  case class GetJobHistoryAck(data: List[JobFullHistory], override val error: Option[String] = None) extends BaseResponse
   case class DeleteJobAck(success: Boolean, override val error: Option[String] = None) extends BaseResponse
 
   // Json Reads
@@ -94,6 +111,9 @@ object JobModel {
   implicit val CreateJobAckWrites = Json.writes[CreateUpdateJobAck]
   implicit val JobsWrites = Json.writes[Job]
   implicit val GetJobsAckWrites = Json.writes[GetJobsAck]
+  implicit val JobHistoryDetailWrites = Json.writes[JobHistoryDetail]
+  implicit val JobFullHistoryWrites = Json.writes[JobFullHistory]
+  implicit val GetJobHistoryAckWrites = Json.writes[GetJobHistoryAck]
   implicit val DeleteJobAckWrites = Json.writes[DeleteJobAck]
   implicit val PushJobWrites = Json.writes[PushJob]
 }

@@ -10,7 +10,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.alpakka.cassandra.scaladsl.{CassandraSink, CassandraSource}
 import akka.stream.scaladsl.{Sink, Source}
 import com.datastax.driver.core._
-import me.mig.mars.models.JobModel.{CreateUpdateJob, Job, JobHistory, JobHistoryDetail, JobHistorySuccess, NextJob}
+import me.mig.mars.models.JobModel.{CreateUpdateJob, Job, JobFullHistory, JobHistory, JobHistoryDetail, JobHistorySuccess, NextJob}
 import play.api.inject.ApplicationLifecycle
 import play.api.{Configuration, Logger}
 
@@ -75,6 +75,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
   def setNextJob(jobId: String, delay: Long): Future[String] = jobsTable.setNextJob(jobId, delay)
   def disableJob(jobId: String): Future[Boolean] = jobsTable.disableJob(jobId)
   def createUpdateJobHistory(jobHistory: JobHistory): Future[String] = jobHistoryTable.createUpdateJobHistory(jobHistory)
+  def getJobHistory(jobId: String): Future[List[JobFullHistory]] = jobHistoryTable.getJobHistory(jobId)
   def updateJobHistoryUsers(jobId: String, startTime: Timestamp, users: List[String], totalCount: Long): Future[String] =
     jobHistoryTable.updateJobHistoryUsersAndTokenCount(jobId, startTime, users, totalCount)
   def updateJobHistorySuccessCount(jobId: String, startTime: Timestamp): Future[String] =
@@ -115,7 +116,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
         else None,
         new Timestamp(row.getTimestamp("startTime").getTime),
         if (row.getTimestamp("endTime") != null) Some(new Timestamp(row.getTimestamp("endTime").getTime)) else None,
-        if (row.get[Long]("interval", classOf[Long]) != null) Some(row.get[Long]("interval", classOf[Long])) else None,
+        Option(row.get[Long]("interval", classOf[Long])),
         row.getString("notificationType"),
         row.getString("message"),
         row.getMap[String, String]("callToAction", classOf[String], classOf[String]).toMap,
@@ -129,12 +130,12 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
         preparedStmt.bind(
           bindJob.id,
           bindJob.creator,
-          if (bindJob.users nonEmpty) bindJob.users.get.asJava else null,  // Need specific conversion to Java types
-          if (bindJob.label nonEmpty) bindJob.label.get.asJava else null,   // Need specific conversion to Java types
-          if (bindJob.country nonEmpty) bindJob.country.get.asJava else null, // Need specific conversion to Java types
+          if (bindJob.users.nonEmpty) bindJob.users.get.asJava else null,  // Need specific conversion to Java types
+          if (bindJob.label.nonEmpty) bindJob.label.get.asJava else null,   // Need specific conversion to Java types
+          if (bindJob.country.nonEmpty) bindJob.country.get.asJava else null, // Need specific conversion to Java types
           bindJob.startTime,
-          bindJob.endTime.getOrElse(null),
-          if (bindJob.interval nonEmpty) bindJob.interval.get: JavaLong else null, // Need specific conversion to Java types
+          bindJob.endTime.orNull,
+          if (bindJob.interval.nonEmpty) bindJob.interval.get: JavaLong else null, // Need specific conversion to Java types
           bindJob.notificationType,
           bindJob.message,
           mapAsJavaMap(bindJob.callToAction),
@@ -161,7 +162,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
         preparedStmt.bind(nextJob.startTime, nextJob.id)
       val sink = CassandraSink[NextJob](parallelism = 1, preparedSetNextJobStmt, stmtBinder)
 
-      CassandraSource(new SimpleStatement(SELECT_STARTTIME_INTERVAL + s"'${jobId}'"))
+      CassandraSource(new SimpleStatement(SELECT_STARTTIME_INTERVAL + s"'$jobId'"))
         .map(row => {
           val nextStartTime = new Timestamp(row.getTimestamp(0).getTime + delay)
           Logger.info("To set job(" + jobId + ") with new startTime: " + nextStartTime)
@@ -176,7 +177,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
     private[cassandra] def getJobs(jobId: Option[String] = None): Future[List[Job]] = {
       val queryStmt = jobId match {
         case Some(id) =>
-          new SimpleStatement(SELECT_JOBS + s" WHERE id='${jobId.getOrElse(null)}'")
+          new SimpleStatement(SELECT_JOBS + s" WHERE id='${jobId.orNull}'")
         case None =>
           new SimpleStatement(SELECT_JOBS)
       }
@@ -211,25 +212,28 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
   private[cassandra] class JobHistoryTable() {
     private final val UPSERT_JOBHISTORY = "INSERT INTO mars.jobhistory (id, creator, users, label, country, starttime, endtime, interval, notificationtype, message, calltoaction, createdtime, totalcount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     private final val UPDATE_JOBHISTORY_USERS_TOTALCOUNT = "UPDATE mars.jobhistory SET users = ?, totalcount = ? WHERE id = ? AND starttime = ?"
+    private final val SELECT_JOBHISTORY = "SELECT * from mars.jobhistory WHERE id = ?"
+
+    private final val preparedSelectStmt = session.prepare(SELECT_JOBHISTORY)
 
     private val rowMapping = (row: Row) =>
       JobHistory(row.getString("id"),
         row.getString("creator"),
         if (row.getList("users", classOf[String]) != null &&
-          row.getList("users", classOf[String]).nonEmpty) // Because cassandra will return EMPTY set if value is null.
+          row.getList("users", classOf[String]).nonEmpty) // Cassandra will return EMPTY set if value is null.
           Some(row.getList[String]("users", classOf[String]).toList)
         else None,
         if (row.getList("label", classOf[JavaShort]) != null &&
-          row.getList("label", classOf[JavaShort]).nonEmpty) // Because cassandra will return EMPTY set if value is null.
+          row.getList("label", classOf[JavaShort]).nonEmpty) // Cassandra will return EMPTY set if value is null.
           Some(row.getList[JavaShort]("label", classOf[JavaShort]).map(l => l: Short).toList)
         else None,
         if (row.getList("country", classOf[Integer]) != null &&
-          row.getList("country", classOf[Integer]).nonEmpty) // Because cassandra will return EMPTY set if value is null.
+          row.getList("country", classOf[Integer]).nonEmpty) // Cassandra will return EMPTY set if value is null.
           Some(row.getList[Integer]("country", classOf[Integer]).map(c => c: Int).toList)
         else None,
         new Timestamp(row.getTimestamp("startTime").getTime),
         if (row.getTimestamp("endTime") != null) Some(new Timestamp(row.getTimestamp("endTime").getTime)) else None,
-        if (row.get[Long]("interval", classOf[Long]) != null) Some(row.get[Long]("interval", classOf[Long])) else None,
+        Option(row.get[Long]("interval", classOf[Long])),
         row.getString("notificationType"),
         row.getString("message"),
         row.getMap[String, String]("callToAction", classOf[String], classOf[String]).toMap,
@@ -239,21 +243,21 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
 
     private[cassandra] def createUpdateJobHistory(jobHistory: JobHistory): Future[String] = {
       val preparedStmt = session.prepare(UPSERT_JOBHISTORY)
-      val stmtBinder = (bindJob: JobHistory, preparedStmt: PreparedStatement) =>
+      val stmtBinder = (bindJobHistory: JobHistory, preparedStmt: PreparedStatement) =>
         preparedStmt.bind(
-          bindJob.id,
-          bindJob.creator,
-          if (bindJob.users nonEmpty) bindJob.users.get.asJava else null,  // Need specific conversion to Java types
-          if (bindJob.label nonEmpty) bindJob.label.get.asJava else null,   // Need specific conversion to Java types
-          if (bindJob.country nonEmpty) bindJob.country.get.asJava else null, // Need specific conversion to Java types
-          bindJob.startTime,
-          bindJob.endTime.getOrElse(null),
-          if (bindJob.interval nonEmpty) bindJob.interval.get: JavaLong else null, // Need specific conversion to Java types
-          bindJob.notificationType,
-          bindJob.message,
-          mapAsJavaMap(bindJob.callToAction),
-          bindJob.createdTime,
-          bindJob.totalCount: JavaLong
+          bindJobHistory.id,
+          bindJobHistory.creator,
+          if (bindJobHistory.users.nonEmpty) bindJobHistory.users.get.asJava else null,  // Need specific conversion to Java types
+          if (bindJobHistory.label.nonEmpty) bindJobHistory.label.get.asJava else null,   // Need specific conversion to Java types
+          if (bindJobHistory.country.nonEmpty) bindJobHistory.country.get.asJava else null, // Need specific conversion to Java types
+          bindJobHistory.startTime,
+          bindJobHistory.endTime.orNull,
+          if (bindJobHistory.interval.nonEmpty) bindJobHistory.interval.get: JavaLong else null, // Need specific conversion to Java types
+          bindJobHistory.notificationType,
+          bindJobHistory.message,
+          mapAsJavaMap(bindJobHistory.callToAction),
+          bindJobHistory.createdTime,
+          bindJobHistory.totalCount: JavaLong
         )
       val sink = CassandraSink[JobHistory](parallelism = 2, preparedStmt, stmtBinder)
 
@@ -268,8 +272,8 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
 
     private[cassandra] def updateJobHistoryUsersAndTokenCount(jobId: String, startTime: Timestamp, users: List[String], totalCount: Long): Future[String] = {
       val preparedStmt = session.prepare(UPDATE_JOBHISTORY_USERS_TOTALCOUNT)
-      val stmtBinder = (bindJob: (JavaList[String], Long, String, Timestamp), preparedStmt: PreparedStatement) =>
-        preparedStmt.bind(bindJob._1, bindJob._2: JavaLong, bindJob._3, bindJob._4)
+      val stmtBinder = (bindJobHistory: (JavaList[String], Long, String, Timestamp), preparedStmt: PreparedStatement) =>
+        preparedStmt.bind(bindJobHistory._1, bindJobHistory._2: JavaLong, bindJobHistory._3, bindJobHistory._4)
       val sink = CassandraSink[(JavaList[String], Long, String, Timestamp)](parallelism = 2, preparedStmt, stmtBinder)
 
       Source.single((users.asJava, totalCount, jobId, startTime)).runWith(sink).transform[String](
@@ -280,11 +284,39 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
         }
       )
     }
+
+    private[cassandra] def getJobHistory(jobId: String): Future[List[JobFullHistory]] = {
+      val queryStmt = new SimpleStatement(SELECT_JOBHISTORY.replace("?", s"'${jobId}'"))
+      CassandraSource(queryStmt)
+        .map(rowMapping)
+        .mapAsync(10) { history =>
+          for {
+            historySuccess <- jobHistorySuccessTable.getJobHistorySuccess(history.id, history.startTime)
+            historyDetail <- jobHistoryDetailTable.getJobHistoryDetail(history.id, history.startTime)
+          } yield {
+            val (successCount: Long, failureCount: Long) =
+              if (historySuccess.nonEmpty)
+                (historySuccess.head.successCount, historySuccess.head.failureCount)
+              else (0L, 0L)
+            JobFullHistory(history.id, history.creator, history.users, history.label, history.country,
+              history.startTime, history.endTime, history.interval, history.notificationType, history.message,
+              history.callToAction, history.createdTime, history.totalCount, successCount, failureCount,
+              historyDetail)
+          }
+
+        }
+        .runWith(Sink.seq)
+        .transform(
+          _.toList,
+          ex => ex
+        )
+    }
   }
 
   private[cassandra] class JobHistorySuccessTable() {
     private final val UPDATE_JOBHISTORY_SUCCESS = "UPDATE mars.jobhistorysuccess SET successcount = successcount + 1 WHERE id = ? AND starttime = ?"
     private final val UPDATE_JOBHISTORY_FAILURE = "UPDATE mars.jobhistorysuccess SET failurecount = failurecount + 1 WHERE id = ? AND starttime = ?"
+    private final val SELECT_JOBHISTORY_SUCCESS = "SELECT * from mars.jobhistorysuccess WHERE id = ? AND starttime = ?"
 
     private val preparedUpdateSuccessStmt = session.prepare(UPDATE_JOBHISTORY_SUCCESS)
     private val preparedUpdateFailureStmt = session.prepare(UPDATE_JOBHISTORY_FAILURE)
@@ -323,10 +355,19 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
         }
       )
     }
+
+    private[cassandra] def getJobHistorySuccess(jobId: String, startTime: Timestamp): Future[List[JobHistorySuccess]] = {
+      val queryStmt = new SimpleStatement(SELECT_JOBHISTORY_SUCCESS.replaceFirst("\\?", s"'${jobId}'").replace("?", startTime.getTime.toString))
+      CassandraSource(queryStmt).runWith(Sink.seq).transform(
+        _.map(rowMapping).toList,
+        ex => ex
+      )
+    }
   }
 
   private[cassandra] class JobHistoryDetailTable() {
     private final val UPSERT_JOBHISTORYDETAIL = "INSERT INTO mars.jobhistorydetail (id, starttime, user, success, platform, devicetoken, endpoint, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    private final val SELECT_JOBHISTORYDETAIL = "SELECT * FROM mars.jobhistorydetail WHERE id = ? AND starttime = ?"
     private final val preparedInsertStmt = session.prepare(UPSERT_JOBHISTORYDETAIL)
 
     private val rowMapping = (row: Row) =>
@@ -336,7 +377,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
         row.getBool("success"),
         row.getString("platform"),
         row.getString("devicetoken"),
-        if (row.getString("endpoint") != null) Some(row.getString("endpoint")) else None,
+        Option(row.getString("endpoint")),
         row.getString("reason")
       )
 
@@ -349,7 +390,7 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
           bindJob.success: java.lang.Boolean,
           bindJob.platform,
           bindJob.deviceToken,
-          if (bindJob.endpoint nonEmpty) bindJob.endpoint.get else null,
+          if (bindJob.endpoint.nonEmpty) bindJob.endpoint.get else null,
           bindJob.reason
         )
       val sink = CassandraSink[JobHistoryDetail](parallelism = 2, preparedInsertStmt, stmtBinder)
@@ -360,6 +401,14 @@ class MarsKeyspace @Inject()(configuration: Configuration, applicationLifecycle:
           Logger.error("Create/update job history detail error: " + ex.getMessage)
           ex
         }
+      )
+    }
+
+    private[cassandra] def getJobHistoryDetail(jobId: String, startTime: Timestamp): Future[List[JobHistoryDetail]] = {
+      val queryStmt = new SimpleStatement(SELECT_JOBHISTORYDETAIL.replaceFirst("\\?", s"'${jobId}'").replace("?", startTime.getTime.toString))
+      CassandraSource(queryStmt).runWith(Sink.seq).transform(
+        _.map(rowMapping).toList,
+        ex => ex
       )
     }
   }

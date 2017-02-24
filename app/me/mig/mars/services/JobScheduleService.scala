@@ -9,7 +9,7 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
-import me.mig.mars.models.JobModel.{CreateUpdateJob, CreateUpdateJobAck, DeleteJobAck, DispatchJob, GetJobsAck, Job, ScheduleJob}
+import me.mig.mars.models.JobModel.{CreateUpdateJob, CreateUpdateJobAck, DeleteJobAck, DispatchJob, GetJobHistoryAck, GetJobsAck, Job, ScheduleJob}
 import me.mig.mars.models.NotificationModel.GetNotificationTypesAck
 import me.mig.mars.models.NotificationType
 import me.mig.mars.repositories.cassandra.MarsKeyspace
@@ -114,6 +114,15 @@ class JobScheduleService @Inject()(appLifecycle: ApplicationLifecycle, configura
           ex => ex
         )
     })
+  }
+
+  def getJobHistory(): Flow[String, GetJobHistoryAck, _] = {
+    Flow[String].mapAsync(2)(
+      keyspace.getJobHistory(_).transform(
+        result => GetJobHistoryAck(result),
+        ex => ex
+      )
+    )
   }
 
   def getNotificationTypes(): Flow[Int, GetNotificationTypesAck, _] = {
