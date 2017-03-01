@@ -3,7 +3,7 @@ package me.mig.neith.controllers
 import fly.play.s3.S3Exception
 import me.mig.neith.constants.ErrorCodes
 import me.mig.neith.exceptions.NeithException
-import me.mig.playcommon.controllers.UsersBaseController
+import me.mig.solar.sessioncheck.controllers.SessionBaseController
 import play.api.Logger
 import play.api.libs.json._
 import play.api.mvc._
@@ -13,7 +13,7 @@ import scala.reflect.runtime.universe._
 /**
   * Created by phyrextsai on 2017/2/10.
   */
-trait BaseController extends UsersBaseController {
+trait BaseController extends SessionBaseController {
 
   def processGeneralResponse[T: TypeTag : Reads : Writes](result: JsValue): Result = {
     Logger.info(s"RESULT: ${result}")

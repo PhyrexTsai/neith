@@ -6,13 +6,11 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import me.mig.neith.models.Users._
 import me.mig.neith.services.FileService
-import me.mig.playcommon.actions.{SessionAuthAction, SessionIdAuthOnlyAction}
-import me.mig.playcommon.dao.SessionInfoDAO
-import me.mig.playcommon.services.UserAuthService
+import me.mig.solar.sessioncheck.actions.{SessionAuthAction, SessionIdAuthOnlyAction}
+import me.mig.solar.sessioncheck.dao.SessionInfoDAO
+import me.mig.solar.sessioncheck.services.UserAuthService
 import play.api.libs.json.JsValue
 import play.api.libs.ws.WSClient
-
-import scala.concurrent.ExecutionContext
 
 /**
   * Created by phyrextsai on 2017/1/19.
@@ -23,8 +21,7 @@ class UsersController @Inject()(fileService: FileService,
                                 val userAuthService: UserAuthService,
                                 val sessionInfoDAO: SessionInfoDAO)
                                (implicit val system: ActorSystem,
-                                val mat: Materializer, ws: WSClient,
-                                val ec: ExecutionContext) extends BaseController {
+                                val mat: Materializer, ws: WSClient) extends BaseController {
 
   def upload(userId: Int) = VerifiedUserAction(userId).async(parse.multipartFormData) { request =>
     Source.fromFuture(fileService.upload(userId, request.body))
