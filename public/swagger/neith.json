@@ -20,7 +20,7 @@
         }
     ],
     "host": "qalab.projectgoth.com",
-    "basePath": "/api/neith",
+    "basePath": "/neith",
     "schemes": [
         "http"
     ],
