@@ -15,7 +15,7 @@ libraryDependencies ++= Seq(
   filters,
   "net.kaliber" %% "play-s3" % "8.0.0",
   "net.logstash.logback" % "logstash-logback-encoder" % "4.8",
-  "me.mig.solar" % "session-check_2.11" % "0.0.1-SNAPSHOT",
+  "me.mig.solar" % "session-check_2.11" % "0.0.1",
   "com.github.seratch" %% "awscala" % "0.5.9",
   // Play test in Scala test
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test",
