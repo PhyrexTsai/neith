@@ -2,7 +2,7 @@ import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd}
 import sbt.Keys._
 import sbtrelease.ReleaseStateTransformations._
 
-name := "neith-in-play"
+name := "neith"
 
 //version := "0.1"
 
@@ -15,8 +15,11 @@ libraryDependencies ++= Seq(
   filters,
   "net.kaliber" %% "play-s3" % "8.0.0",
   "net.logstash.logback" % "logstash-logback-encoder" % "4.8",
+  "me.mig.solar" % "session-check_2.11" % "0.0.1-SNAPSHOT",
+  "com.github.seratch" %% "awscala" % "0.5.9",
   // Play test in Scala test
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test",
+
   specs2 % Test
 )
 
@@ -49,7 +52,7 @@ releaseProcess := Seq[ReleaseStep](
   runTest,
   setReleaseVersion,
   commitReleaseVersion,
-  publishArtifacts,
+  //publishArtifacts,
   tagRelease,
   setNextVersion,
   commitNextVersion,
@@ -60,7 +63,7 @@ releaseProcess := Seq[ReleaseStep](
 //  Assembly Settings
 // ==============================================
 lazy val jira = SettingKey[String]("jira", "The JIRA issue parameter to be propagated to git commit message.")
-lazy val appSecret = Option(System.getProperty("appsecret")).getOrElse("N@O6CmRZgI9q5b;mIklDTh18]EQVitLl85@cPI:y=gX0wQ>QCrq[RqzotyAN0TW8")
+//lazy val appSecret = Option(System.getProperty("appsecret")).getOrElse("N@O6CmRZgI9q5b;mIklDTh18]EQVitLl85@cPI:y=gX0wQ>QCrq[RqzotyAN0TW8")
 
 lazy val commonSettings = Seq(
   //rpmVendor := "migme",
@@ -84,7 +87,7 @@ lazy val commonSettings = Seq(
     ExecCmd("RUN", "chown", "-R", "daemon:daemon", "/var/log/neith"),
     Cmd("USER", "daemon")
   ) ++ dockerCommands.value.takeRight(2),
-  dockerEntrypoint in Docker := Seq("bin/neith", s"-Dplay.crypto.secret='${appSecret}'"),
+  //dockerEntrypoint in Docker := Seq("bin/neith", s"-Dplay.crypto.secret='${appSecret}'"),
   dockerRepository := Some("192.168.0.21:5000"),//Some("registry.marathon.l4lb.thisdcos.directory:5000"), //Some("192.168.0.123:5000"),//
   dockerUpdateLatest := true
 )
