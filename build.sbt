@@ -52,7 +52,7 @@ releaseProcess := Seq[ReleaseStep](
   runTest,
   setReleaseVersion,
   commitReleaseVersion,
-  publishArtifacts,
+  //publishArtifacts,
   tagRelease,
   setNextVersion,
   commitNextVersion,
