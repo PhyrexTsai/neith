@@ -10,7 +10,7 @@ import play.api.libs.Files.TemporaryFile
   */
 class ImageUtilsTest extends FlatSpec with Matchers {
 
-  private val bucketName = "s3testingphyrex"
+  private val bucketName = "images-staging.mig33.com"
   private val USER_ID = 195711006
   private val FILE_PATH = "test/resources/test.jpeg"
   private val TEMPFILE_PATH = "test/resources/template.jpeg"
