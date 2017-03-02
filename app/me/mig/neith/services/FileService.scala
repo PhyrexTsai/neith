@@ -3,6 +3,7 @@ package me.mig.neith.services
 import java.text.SimpleDateFormat
 import java.util.Date
 
+import awscala.DateTime
 import com.google.inject.Inject
 import fly.play.s3._
 import me.mig.neith.constants.ErrorCodes
@@ -62,6 +63,22 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
       }).getOrElse({
         Future.failed(new NeithException(ErrorCodes.FILE_NOT_FOUND.errorCode, ErrorCodes.FILE_NOT_FOUND.message))
       })
+  }
+
+  /**
+    * Generate Pre-signed url for S3 upload
+    *
+    * @param userId
+    * @param file
+    * @return
+    */
+  def preSignedUpload(userId: Int, file: PreSignedUpload): Future[JsValue] = {
+    val imageUtils = new ImageUtils(config)
+    Future.successful(
+      Json.obj(
+        "preSignedUrl" -> imageUtils.generatePreSignedUrl(bucketName, userId, file.fileName,  DateTime.now.plusMinutes(10)).toString
+      )
+    )
   }
 
   /**

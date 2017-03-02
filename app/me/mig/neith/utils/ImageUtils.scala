@@ -52,10 +52,11 @@ class ImageUtils @Inject()(config: Configuration) {
   import awscala.Region
   private val AWS_ACCESSKEY_ID = config.getString("aws.accessKeyId").get
   private val AWS_SECRET_KEY = config.getString("aws.secretKey").get
+  private val S3_REGION = config.getString("s3.region").get
 
-  implicit val s3 = S3(AWS_ACCESSKEY_ID, AWS_SECRET_KEY)(Region.US_WEST_1)
+  implicit val s3 = S3(AWS_ACCESSKEY_ID, AWS_SECRET_KEY)(Region.apply(S3_REGION))
 
-  def generatePresignedUrl(bucketName: String, userId: Int, expiration: DateTime): java.net.URL = {
+  def generatePreSignedUrl(bucketName: String, userId: Int, fileName: String, expiration: DateTime): java.net.URL = {
     s3.generatePresignedUrl(bucketName, ImageUtils.calculatePath(userId), expiration.toDate, HttpMethod.PUT)
   }
 }

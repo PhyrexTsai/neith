@@ -23,6 +23,14 @@ class UsersController @Inject()(fileService: FileService,
                                (implicit val system: ActorSystem,
                                 val mat: Materializer, ws: WSClient) extends BaseController {
 
+  def preSignedUpload(userId: Int) = VerifiedUserAction(userId).async(parse.json) { request =>
+    Source.single(request.body.as[PreSignedUpload])
+      .mapAsync(1)(fileService.preSignedUpload(userId, _))
+      .map(processGeneralResponse[JsValue])
+      .runWith(Sink.head)
+      .recover(processErrorResponse)
+  }
+
   def upload(userId: Int) = VerifiedUserAction(userId).async(parse.multipartFormData) { request =>
     Source.fromFuture(fileService.upload(userId, request.body))
       .map(processGeneralResponse[JsValue])
