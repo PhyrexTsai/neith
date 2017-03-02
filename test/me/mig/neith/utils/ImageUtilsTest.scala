@@ -10,7 +10,7 @@ import play.api.libs.Files.TemporaryFile
   */
 class ImageUtilsTest extends FlatSpec with Matchers {
 
-  private val bucketName = "images-staging.mig33.com"
+  private val bucketName = "s3testingphyrex"
   private val USER_ID = 195711006
   private val FILE_PATH = "test/resources/test.jpeg"
   private val TEMPFILE_PATH = "test/resources/template.jpeg"
@@ -25,7 +25,7 @@ class ImageUtilsTest extends FlatSpec with Matchers {
 
   "A Pre-signed URL" should "generate" in {
     val imageUtils = new ImageUtils(config)
-    val preSignedUrl = imageUtils.generatePresignedUrl(bucketName, USER_ID, DateTime.now.plusMinutes(10))
+    val preSignedUrl = imageUtils.generatePreSignedUrl(bucketName, USER_ID, "migme.jpg", DateTime.now.plusMinutes(10))
     println(s"PRE-SIGNED URL: ${preSignedUrl}")
     preSignedUrl.getPath.matches("/i\\/\\w{4}\\/\\w{36}\\/\\w{13}") should be(true)
     preSignedUrl.getQuery.contains("Signature") should be(true)

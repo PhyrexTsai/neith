@@ -12,6 +12,10 @@ object Users {
 
   case class UploadResp(fileUrl: String)
 
+  case class PreSignedUpload(fileName: String)
+
+  case class PreSignedUploadResp(preSignedUrl: String)
+
   case class InitiateMultipartUpload(fileName: String, contentType: String)
 
   case class InitiateMultipartUploadResp(fileName: String, uploadId: String)
@@ -26,6 +30,10 @@ object Users {
 
   implicit val uploadRespWrites = Json.writes[UploadResp]
   implicit val uploadRespReads = Json.reads[UploadResp]
+  implicit val preSignedUploadWrites = Json.writes[PreSignedUpload]
+  implicit val preSignedUploadReads = Json.reads[PreSignedUpload]
+  implicit val preSignedUploadRespWrites = Json.writes[PreSignedUploadResp]
+  implicit val preSignedUploadRespReads = Json.reads[PreSignedUploadResp]
   implicit val initiateMultipartUploadWrites = Json.writes[InitiateMultipartUpload]
   implicit val initiateMultipartUploadReads = Json.reads[InitiateMultipartUpload]
   implicit val initiateMultipartUploadRespWrites = Json.writes[InitiateMultipartUploadResp]

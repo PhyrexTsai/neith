@@ -7,13 +7,12 @@ import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData.FilePart
 import play.api.mvc.{AnyContentAsMultipartFormData, MultipartFormData}
 import me.mig.neith.models.MultipartFormDataWritable
+import me.mig.neith.models.Users.PreSignedUploadResp
 import org.specs2.specification.{AfterExample, BeforeExample}
 import play.api.libs.json.Json
 
 /**
- * Add your spec here.
- * You can mock out a whole application including requests, plugins etc.
- * For more information, consult the wiki.
+ * Application test spec.
  */
 @RunWith(classOf[JUnitRunner])
 class ApplicationSpec extends Specification with BeforeExample with AfterExample {
@@ -86,6 +85,27 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       status(result) must equalTo(OK)
       contentType(result) must beSome.which(_ == "application/json")
       contentAsString(result) must contain("fileUrl")
+    }
+
+    /**
+      * Work curl:
+      * curl -v -T migme.jpg "https://images-staging.mig33.com.s3-us-west-1.amazonaws.com/i/b658/9fc6ab0dc82cf12099d1c2d40ab994e8410c/1488429944711?AWSAccessKeyId=AKIAJR35PVXZGYS6JRTA&Expires=1488430544&Signature=Wxyu3Ba%2BW9qvssasJEvdWUw7KJc%3D"
+      */
+    "generate pre-signed url on POST /v1/users/:userId/preSignedUpload" in new WithApplication {
+      val body = Json.obj(
+        "fileName" -> FILE_NAME
+      )
+      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/preSignedUpload").withHeaders(
+        ("sessionId", SESSION_ID),
+        ("x-forwarded-for", "8.8.8.8")
+      ).withJsonBody(body)
+      val result = route(request).get
+
+      val preSignedUrl = contentAsJson(result).as[PreSignedUploadResp].preSignedUrl
+      println(preSignedUrl)
+      status(result) must equalTo(OK)
+      contentType(result) must beSome.which(_ == "application/json")
+      contentAsString(result) must contain("preSignedUrl")
     }
 
     "upload empty file to AWS S3 and response BadRequest on PUT /v1/users/:userId/upload" in new WithApplication {
