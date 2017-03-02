@@ -20,7 +20,7 @@
         }
     ],
     "host": "qalab.projectgoth.com",
-    "basePath": "/neith",
+    "basePath": "/api/neith",
     "schemes": [
         "http"
     ],
@@ -41,6 +41,59 @@
                 "responses": {
                     "200": {
                         "description": "Service is available"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/v1/users/{userId}/preSignedUrl": {
+            "post": {
+                "description": "Generate pre-signed url",
+                "tags": [
+                    "Users"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "User Id",
+                        "default": 195500745,
+                        "type": "integer",
+                        "required": true
+                    },
+                    {
+                        "name": "sessionId",
+                        "in": "header",
+                        "description": "Session ID for validation",
+                        "default": "wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==",
+                        "type": "string",
+                        "required": true
+                    },
+                    {
+                        "name": "body",
+                        "in": "body",
+                        "description": "request body",
+                        "schema": {
+                            "$ref": "#/definitions/PreSignedUpload"
+                        },
+                        "required": true
+                    }
+                ],
+                "summary": "Generate pre-signed url",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/PreSignedUploadResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -484,6 +537,23 @@
             "type": "object",
             "properties": {
                 "fileUrl": {
+                    "type": "string"
+                }
+            }
+        },
+        "PreSignedUpload": {
+            "type": "object",
+            "properties": {
+                "fileName": {
+                    "type": "string",
+                    "default": "migme.jpg"
+                }
+            }
+        },
+        "PreSignedUploadResp": {
+            "type": "object",
+            "properties": {
+                "preSignedUrl": {
                     "type": "string"
                 }
             }
