@@ -7,4 +7,4 @@ import play.filters.cors.CORSFilter
 /**
   * Created by phyrextsai on 2017/1/23.
   */
-class Filters @Inject()(log: LoggingFilter, corsFilter: CORSFilter) extends DefaultHttpFilters(log)
+class Filters @Inject()(log: LoggingFilter, corsFilter: CORSFilter) extends DefaultHttpFilters(log, corsFilter)
