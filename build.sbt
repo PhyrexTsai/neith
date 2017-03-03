@@ -15,8 +15,9 @@ libraryDependencies ++= Seq(
   filters,
   "net.kaliber" %% "play-s3" % "8.0.0",
   "net.logstash.logback" % "logstash-logback-encoder" % "4.8",
-  "me.mig.solar" % "session-check_2.11" % "0.0.1",
+  "me.mig.solar" %% "solar-session-check" % "0.0.1",
   "com.github.seratch" %% "awscala" % "0.5.9",
+  "org.webjars" % "swagger-ui" % "2.2.0",
   // Play test in Scala test
   "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % "test",
 
@@ -92,8 +93,10 @@ lazy val commonSettings = Seq(
   dockerUpdateLatest := true
 )
 
+swaggerDomainNameSpaces := Seq("me.mig.neith.models")
+
 lazy val neith = (project in file("."))
-  .enablePlugins(PlayScala)
+  .enablePlugins(PlayScala, SwaggerPlugin)
   //must have this for future publish in Jenkins
   .enablePlugins(JavaAppPackaging)
   .settings(commonSettings: _*)
