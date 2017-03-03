@@ -89,7 +89,7 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
 
     /**
       * Reference: http://stackoverflow.com/questions/10100193/put-file-to-s3-with-presigned-url
-      * curl -v -T migme.jpg "https://images-staging.mig33.com.s3-us-west-1.amazonaws.com/i/b658/9fc6ab0dc82cf12099d1c2d40ab994e8410c/1488429944711?AWSAccessKeyId=AKIAJR35PVXZGYS6JRTA&Expires=1488430544&Signature=Wxyu3Ba%2BW9qvssasJEvdWUw7KJc%3D"
+      * curl -k -v -T migme.jpg "https://images-staging.mig33.com.s3-us-west-1.amazonaws.com/i/44da/4220ace733d265a6a92fd1435573df123713/1488444291086?AWSAccessKeyId=AKIAJR35PVXZGYS6JRTA&Expires=1488444891&Signature=UPVMrSi9uF21lTT7C2NEF2nVlYc%3D"
       */
     "generate pre-signed url on POST /v1/users/:userId/preSignedUpload" in new WithApplication {
       val body = Json.obj(

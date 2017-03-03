@@ -10,7 +10,7 @@ GET     /health                                         me.mig.neith.controllers
 
 # Users
 PUT     /v1/users/:userId/upload                        me.mig.neith.controllers.UsersController.upload(userId: Int)
-POST     /v1/users/:userId/preSignedUpload               me.mig.neith.controllers.UsersController.preSignedUpload(userId: Int)
+POST    /v1/users/:userId/preSignedUpload               me.mig.neith.controllers.UsersController.preSignedUpload(userId: Int)
 POST    /v1/users/:userId/initiateMultipartUpload       me.mig.neith.controllers.UsersController.initiateMultipartUpload(userId: Int)
 POST    /v1/users/:userId/uploadPart                    me.mig.neith.controllers.UsersController.uploadPart(userId: Int)
 POST    /v1/users/:userId/completeMultipartUpload       me.mig.neith.controllers.UsersController.completeMultipartUpload(userId: Int)
