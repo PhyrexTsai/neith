@@ -274,6 +274,59 @@ POST    /v1/users/:userId/completeMultipartUpload       me.mig.neith.controllers
 DELETE  /v1/users/:userId/abortMultipartUpload          me.mig.neith.controllers.UsersController.abortMultipartUpload(userId: Int, fileName: String, uploadId: String)
 
 ###
+#  description: List multipart uploads
+#  tags:
+#    - Users
+#  produces:
+#    - application/json
+#  parameters:
+#    - name: userId
+#      in: path
+#      description: User Id
+#      default: 195500745
+#      type: integer
+#      required: true
+#    - name: sessionId
+#      in: header
+#      description: Session ID for validation
+#      default: >-
+#        wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==
+#      type: string
+#      required: true
+#    - name: fileName
+#      in: query
+#      description: file name
+#      type: string
+#      required: true
+#      default: 'migme.jpg'
+#    - name: uploadId
+#      in: query
+#      description: upload id
+#      type: string
+#      required: true
+#    - name: maxUploads
+#      in: query
+#      description: max uploads
+#      type: integer
+#      required: false
+#      default: 10
+#    - name: delimiter
+#      in: query
+#      description: delimiter
+#      type: string
+#      required: false
+#  summary: List multipart uploads
+#  responses:
+#    '200':
+#      description: OK
+#    '400':
+#      description: Bad request
+#    '500':
+#      description: Internal server error
+###
+GET     /v1/users/:userId/listMultipartUploads          me.mig.neith.controllers.UsersController.listMultipartUploads(userId: Int, fileName: String, uploadId: String, maxUploads: Int = 3, delimiter: String = "")
+
+###
 #  description: List upload parts
 #  tags:
 #    - Users
@@ -324,59 +377,6 @@ DELETE  /v1/users/:userId/abortMultipartUpload          me.mig.neith.controllers
 #        type: array
 #        items:
 #          $ref: '#/definitions/me.mig.neith.models.Users.Part'
-#    '400':
-#      description: Bad request
-#    '500':
-#      description: Internal server error
-###
-GET     /v1/users/:userId/listMultipartUploads          me.mig.neith.controllers.UsersController.listMultipartUploads(userId: Int, fileName: String, uploadId: String, maxUploads: Int = 3, delimiter: String = "")
-
-###
-#  description: List multipart uploads
-#  tags:
-#    - Users
-#  produces:
-#    - application/json
-#  parameters:
-#    - name: userId
-#      in: path
-#      description: User Id
-#      default: 195500745
-#      type: integer
-#      required: true
-#    - name: sessionId
-#      in: header
-#      description: Session ID for validation
-#      default: >-
-#        wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==
-#      type: string
-#      required: true
-#    - name: fileName
-#      in: query
-#      description: file name
-#      type: string
-#      required: true
-#      default: 'migme.jpg'
-#    - name: uploadId
-#      in: query
-#      description: upload id
-#      type: string
-#      required: true
-#    - name: maxUploads
-#      in: query
-#      description: max uploads
-#      type: integer
-#      required: false
-#      default: 10
-#    - name: delimiter
-#      in: query
-#      description: delimiter
-#      type: string
-#      required: false
-#  summary: List multipart uploads
-#  responses:
-#    '200':
-#      description: OK
 #    '400':
 #      description: Bad request
 #    '500':
