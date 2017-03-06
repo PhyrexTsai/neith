@@ -242,7 +242,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
           (n \ "PartNumber").text.toInt,
           (n \ "ETag").text,
           (n \ "Size").text.toDouble,
-          new Date(dateTimeFormat.parseMillis((n \ "Initiated").text))
+          new Date(dateTimeFormat.parseMillis((n \ "LastModified").text))
         )
       })
 
