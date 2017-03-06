@@ -41,7 +41,7 @@ object ImageUtils {
 
   private def hashAndSplit(rawText: String, delim: String, tokenSize: Int): String = {
     val text: String = DigestUtils.shaHex(rawText)
-    val sb: StringBuffer = new StringBuffer
+    val sb: StringBuilder = new StringBuilder
     sb.append(text.substring(0, 4))
     sb.append(delim)
     sb.append(text.substring(4))
