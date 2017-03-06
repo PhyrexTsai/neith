@@ -33,6 +33,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
   private val s3 = S3.fromConfiguration(ws, config)
   private val bucket = s3.getBucket(bucketName)
   private val simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+  private val preSignedUrlExpire = 10
 
   /**
     * Upload single file
@@ -76,7 +77,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
     val imageUtils = new ImageUtils(config)
     Future.successful(
       Json.obj(
-        "preSignedUrl" -> imageUtils.generatePreSignedUrl(bucketName, userId, file.fileName,  DateTime.now.plusMinutes(10)).toString
+        "preSignedUrl" -> imageUtils.generatePreSignedUrl(bucketName, userId, file.fileName,  DateTime.now.plusMinutes(preSignedUrlExpire)).toString
       )
     )
   }
