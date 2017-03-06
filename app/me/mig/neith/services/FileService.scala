@@ -1,15 +1,15 @@
 package me.mig.neith.services
 
-import java.text.SimpleDateFormat
 import java.util.Date
 
 import awscala.DateTime
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import fly.play.s3._
 import me.mig.neith.constants.ErrorCodes
 import me.mig.neith.exceptions.NeithException
 import me.mig.neith.models.Users._
 import me.mig.neith.utils.ImageUtils
+import org.joda.time.format.DateTimeFormat
 import play.api.libs.Files
 import play.api.libs.json.{JsValue, Json}
 import play.api.{Configuration, Logger}
@@ -22,6 +22,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * Created by phyrextsai on 2017/1/19.
   */
+@Singleton
 class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionContext) {
 
   private val bucketName = config.getString("aws.s3.bucketName").getOrElse("images-staging.mig33.com")
@@ -32,7 +33,8 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
   private val fileKey = "file"
   private val s3 = S3.fromConfiguration(ws, config)
   private val bucket = s3.getBucket(bucketName)
-  private val simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+  private val dateTimeFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+  private val preSignedUrlExpire = 10
 
   /**
     * Upload single file
@@ -76,7 +78,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
     val imageUtils = new ImageUtils(config)
     Future.successful(
       Json.obj(
-        "preSignedUrl" -> imageUtils.generatePreSignedUrl(bucketName, userId, file.fileName,  DateTime.now.plusMinutes(10)).toString
+        "preSignedUrl" -> imageUtils.generatePreSignedUrl(bucketName, userId, file.fileName,  DateTime.now.plusMinutes(preSignedUrlExpire)).toString
       )
     )
   }
@@ -199,7 +201,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
         MultipartUpload(
           (n \ "Key").text,
           (n \ "UploadId").text,
-          new Date(simpleDateFormat.parse((n \ "Initiated").text).getTime)
+          new Date(dateTimeFormat.parseMillis((n \ "Initiated").text))
         )
       })
 
@@ -240,7 +242,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
           (n \ "PartNumber").text.toInt,
           (n \ "ETag").text,
           (n \ "Size").text.toDouble,
-          new Date(simpleDateFormat.parse((n \ "LastModified").text).getTime)
+          new Date(dateTimeFormat.parseMillis((n \ "Initiated").text))
         )
       })
 

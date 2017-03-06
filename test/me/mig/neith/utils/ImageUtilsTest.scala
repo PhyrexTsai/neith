@@ -29,6 +29,7 @@ class ImageUtilsTest extends FlatSpec with Matchers {
     println(s"PRE-SIGNED URL: ${preSignedUrl}")
     preSignedUrl.getPath.matches("/i\\/\\w{4}\\/\\w{36}\\/\\w{13}") should be(true)
     preSignedUrl.getQuery.contains("Signature") should be(true)
+    preSignedUrl.getQuery.contains("x-amz-acl") should be(true)
   }
 
   "A test image" should "exists" in {

@@ -1,8 +1,10 @@
 package me.mig.neith.utils
 
-import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
 import java.util.Date
 
+import org.apache.commons.lang3.time.FastDateFormat
+import org.joda.time.format.DateTimeFormat
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -11,10 +13,9 @@ import org.scalatest.{FlatSpec, Matchers}
 class DateTest extends FlatSpec with Matchers {
 
   "A date format" should "parse" in {
-    val simpleDateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
-    val time = simpleDateFormat.parse("2010-11-10T20:48:33.000Z").getTime
-    val date = new Date(time)
-    simpleDateFormat.format(date) should be("2010-11-10T20:48:33")
+    val format = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    val date = new Date(format.parseMillis("2010-11-10T20:48:33.000Z"))
+    format.print(date.getTime) should be("2010-11-10T20:48:33.000Z")
   }
 
 }

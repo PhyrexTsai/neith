@@ -2,6 +2,7 @@ package me.mig.neith.utils
 
 import awscala._
 import com.amazonaws.HttpMethod
+import com.amazonaws.services.s3.model.{CannedAccessControlList, GeneratePresignedUrlRequest}
 import com.google.inject.Inject
 import s3._
 import org.apache.commons.codec.digest.DigestUtils
@@ -40,7 +41,7 @@ object ImageUtils {
 
   private def hashAndSplit(rawText: String, delim: String, tokenSize: Int): String = {
     val text: String = DigestUtils.shaHex(rawText)
-    val sb: StringBuffer = new StringBuffer
+    val sb: StringBuilder = new StringBuilder
     sb.append(text.substring(0, 4))
     sb.append(delim)
     sb.append(text.substring(4))
@@ -56,7 +57,18 @@ class ImageUtils @Inject()(config: Configuration) {
 
   implicit val s3 = S3(AWS_ACCESSKEY_ID, AWS_SECRET_KEY)(Region.apply(S3_REGION))
 
+  /**
+    * Generate pre-signed url with acl: public-read
+    * @param bucketName
+    * @param userId
+    * @param fileName
+    * @param expiration
+    * @return
+    */
   def generatePreSignedUrl(bucketName: String, userId: Int, fileName: String, expiration: DateTime): java.net.URL = {
-    s3.generatePresignedUrl(bucketName, ImageUtils.calculatePath(userId), expiration.toDate, HttpMethod.PUT)
+    val request = new GeneratePresignedUrlRequest(bucketName, ImageUtils.calculatePath(userId), HttpMethod.PUT);
+    request.setExpiration(expiration.toDate)
+    request.addRequestParameter("x-amz-acl", CannedAccessControlList.PublicRead.toString)
+    s3.generatePresignedUrl(request)
   }
 }
