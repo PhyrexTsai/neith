@@ -29,6 +29,7 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
   private val cdnDomain = config.getString("aws.s3.cdnDomain").getOrElse("b-img.cdn.mig.me")
   private val baseDomain = config.getString("aws.s3.baseDomain").getOrElse("s3-us-west-2.amazonaws.com")
   private val httpProtocol = config.getString("aws.s3.httpProtocol").getOrElse("http://")
+  private val useCdnDomain = config.getBoolean("aws.s3.useCdnDomain").getOrElse(false)
 
   private val fileKey = "file"
   private val s3 = S3.fromConfiguration(ws, config)
@@ -53,8 +54,12 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
             val byteArray = Files.readAllBytes(Paths.get(file.ref.file.getPath))
             val name = ImageUtils.calculatePath(userId)
             val result = bucket + BucketFile(name, file.contentType.get, byteArray)
+            val hostDomain = useCdnDomain match {
+              case true => cdnDomain
+              case false => baseDomain + "/" + bucketName
+            }
             result map { unit =>
-              val fileUrl = httpProtocol + baseDomain + "/" + bucketName + "/" + name
+              val fileUrl = httpProtocol + hostDomain + "/" + name
               Json.obj(
                 "fileUrl" -> fileUrl
               )
