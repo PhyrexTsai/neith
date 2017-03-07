@@ -1,0 +1,23 @@
+swagger: '2.0'
+info:
+  description: |-
+    This is for neith file upload service.
+
+    **Environments**:
+    - QALAB: http://192.168.0.25:10113
+    - STG:   http://perseus-public01.stg.projectgoth.com:10113
+    - PROD:  http://mig.me/api/neith
+
+  contact:
+    name: server team
+    url: 'http://mig.me/'
+    email: serverteam@mig.me
+  termsOfService: ''
+  version: '1.0'
+  title: Solar Microservices
+tags:
+  - name: Health
+  - name: Users
+basePath: /
+schemes:
+  - http

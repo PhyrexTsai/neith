@@ -1,25 +1,13 @@
-// Release plugins
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.1.4")
-addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.3")
+logLevel := Level.Warn
 
-// The Play plugin
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.5.8")
+resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 
-// Gatling plugin
-addSbtPlugin("io.gatling" % "gatling-sbt" % "2.2.0")
+addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.1.5")
 
-// web plugins
+addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.4")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-coffeescript" % "1.0.0")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.5.10")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-less" % "1.1.0")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.0")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-jshint" % "1.0.3")
-
-addSbtPlugin("com.typesafe.sbt" % "sbt-rjs" % "1.0.7")
-
-addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.0")
-
-addSbtPlugin("com.typesafe.sbt" % "sbt-mocha" % "1.1.0")
-
-addSbtPlugin("org.irundaia.sbt" % "sbt-sassify" % "1.4.2")
+addSbtPlugin("com.iheart" % "sbt-play-swagger" % "0.5.2")
