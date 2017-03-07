@@ -7,7 +7,7 @@ import com.google.inject.{Inject, Singleton}
 import fly.play.s3._
 import me.mig.neith.constants.ErrorCodes
 import me.mig.neith.exceptions.NeithException
-import me.mig.neith.models.Users._
+import me.mig.neith.models.Files._
 import me.mig.neith.utils.ImageUtils
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.Files

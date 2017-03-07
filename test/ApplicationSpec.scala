@@ -7,7 +7,7 @@ import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData.FilePart
 import play.api.mvc.{AnyContentAsMultipartFormData, MultipartFormData}
 import me.mig.neith.models.MultipartFormDataWritable
-import me.mig.neith.models.Users.PreSignedUploadResp
+import me.mig.neith.models.Files.PreSignedUploadResp
 import org.specs2.specification.{AfterExample, BeforeExample}
 import play.api.libs.json.Json
 
@@ -17,7 +17,6 @@ import play.api.libs.json.Json
 @RunWith(classOf[JUnitRunner])
 class ApplicationSpec extends Specification with BeforeExample with AfterExample {
 
-  val USER_ID = "0"
   val FILE_NAME = "file.jpeg"
   val PART_FILE_NAME = "part.jpeg"
   val MIME_TYPE = "image/jpeg"
@@ -71,12 +70,12 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
 
   "Application UsersController" should {
 
-    "upload file to AWS S3 and response fileUrl on PUT /v1/users/:userId/upload" in new WithApplication {
+    "upload file to AWS S3 and response fileUrl on PUT /v1/files/upload" in new WithApplication {
       val tempFile = TemporaryFile(new java.io.File(TEMP_FILE_PATH))
       val part = FilePart[TemporaryFile](key = "file", filename = FILE_NAME, contentType = Some(MIME_TYPE), ref = tempFile)
       val formData = MultipartFormData(dataParts = Map(), files = Seq(part), badParts = Seq())
       val body = new AnyContentAsMultipartFormData(formData)
-      val request = FakeRequest(PUT, s"/v1/users/${USER_ID}/upload").withHeaders(
+      val request = FakeRequest(PUT, s"/v1/files/upload").withHeaders(
         ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       ).withMultipartFormDataBody(formData)
@@ -91,11 +90,11 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       * Reference: http://stackoverflow.com/questions/10100193/put-file-to-s3-with-presigned-url
       * curl -k -v -T migme.jpg "https://images-staging.mig33.com.s3-us-west-1.amazonaws.com/i/44da/4220ace733d265a6a92fd1435573df123713/1488444291086?AWSAccessKeyId=AKIAJR35PVXZGYS6JRTA&Expires=1488444891&Signature=UPVMrSi9uF21lTT7C2NEF2nVlYc%3D"
       */
-    "generate pre-signed url on POST /v1/users/:userId/preSignedUpload" in new WithApplication {
+    "generate pre-signed url on POST /v1/files/preSignedUpload" in new WithApplication {
       val body = Json.obj(
         "fileName" -> FILE_NAME
       )
-      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/preSignedUpload").withHeaders(
+      val request = FakeRequest(POST, s"/v1/files/preSignedUpload").withHeaders(
         ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       ).withJsonBody(body)
@@ -108,12 +107,12 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       contentAsString(result) must contain("preSignedUrl")
     }
 
-    "upload empty file to AWS S3 and response BadRequest on PUT /v1/users/:userId/upload" in new WithApplication {
+    "upload empty file to AWS S3 and response BadRequest on PUT /v1/files/upload" in new WithApplication {
       val tempFile = TemporaryFile(new java.io.File(TEMP_FILE_PATH))
       val part = FilePart[TemporaryFile](key = "ErrorKey", filename = FILE_NAME, contentType = Some(MIME_TYPE), ref = tempFile)
       val formData = MultipartFormData(dataParts = Map(), files = Seq(part), badParts = Seq())
       val body = new AnyContentAsMultipartFormData(formData)
-      val request = FakeRequest(PUT, s"/v1/users/${USER_ID}/upload").withHeaders(
+      val request = FakeRequest(PUT, s"/v1/files/upload").withHeaders(
         ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       ).withMultipartFormDataBody(formData)
@@ -124,12 +123,12 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       contentAsString(result) must contain("error")
     }
 
-    "send file name and response uploadId on POST /v1/users/:userId/initiateMultipartUpload" in new WithApplication {
+    "send file name and response uploadId on POST /v1/files/initiateMultipartUpload" in new WithApplication {
       val body = Json.obj(
         "fileName" -> FILE_NAME,
         "contentType" -> MIME_TYPE
       )
-      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/initiateMultipartUpload").withHeaders(
+      val request = FakeRequest(POST, s"/v1/files/initiateMultipartUpload").withHeaders(
         ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       ).withJsonBody(body)
@@ -142,12 +141,12 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       println("InitiateMultipartUpload: " + contentAsString(result))
     }
 
-    "upload part file on POST /v1/users/:userId/uploadPart" in new WithApplication {
+    "upload part file on POST /v1/files/uploadPart" in new WithApplication {
       val partFile = TemporaryFile(new java.io.File(PART_FILE_PATH))
       val part = FilePart[TemporaryFile](key = "file", filename = PART_FILE_NAME, contentType = Some(MIME_TYPE), ref = partFile)
       val formData = MultipartFormData(dataParts = Map(("fileName", Seq(FILE_NAME)), ("uploadId", Seq(PART_UPLOAD_ID)), ("dataPartNumber", Seq("1"))), files = Seq(part), badParts = Seq())
       val body = new AnyContentAsMultipartFormData(formData)
-      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/uploadPart").withHeaders(
+      val request = FakeRequest(POST, s"/v1/files/uploadPart").withHeaders(
         ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       ).withMultipartFormDataBody(formData)
@@ -159,7 +158,7 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       contentAsString(result) must contain("eTag")  //fb10c14f71f8621cd2b0f3387da4cce9
     }
 
-    "complete multipart upload on POST /v1/users/:userId/completeMultipartUpload" in new WithApplication {
+    "complete multipart upload on POST /v1/files/completeMultipartUpload" in new WithApplication {
       val body = Json.obj(
         "fileName" -> FILE_NAME,
         "uploadId" -> UPLOAD_ID,
@@ -172,7 +171,7 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
             "eTag" -> "")
           )
         )
-      val request = FakeRequest(POST, s"/v1/users/${USER_ID}/completeMultipartUpload").withHeaders(
+      val request = FakeRequest(POST, s"/v1/files/completeMultipartUpload").withHeaders(
         ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       ).withJsonBody(body)
@@ -184,8 +183,8 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       //contentAsString(result) must equalTo("{\"complete\":true}")
     }
 
-    "abort multipart upload on DELETE /v1/users/:userId/abortMultipartUpload" in new WithApplication {
-      val request = FakeRequest(DELETE, s"/v1/users/${USER_ID}/abortMultipartUpload?fileName=${FILE_NAME}&uploadId=${ABORT_UPLOAD_ID}").withHeaders(
+    "abort multipart upload on DELETE /v1/files/abortMultipartUpload" in new WithApplication {
+      val request = FakeRequest(DELETE, s"/v1/files/abortMultipartUpload?fileName=${FILE_NAME}&uploadId=${ABORT_UPLOAD_ID}").withHeaders(
         ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       )
@@ -196,8 +195,8 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       contentAsString(result) must equalTo("{\"abort\":true}")
     }
 
-    "list multipart upload on GET /v1/users/:userId/listMultipartUploads" in new WithApplication {
-      val request = FakeRequest(GET, s"/v1/users/${USER_ID}/listMultipartUploads?uploadId=${UPLOAD_ID}&fileName=${FILE_NAME}").withHeaders(
+    "list multipart upload on GET /v1/files/listMultipartUploads" in new WithApplication {
+      val request = FakeRequest(GET, s"/v1/files/listMultipartUploads?uploadId=${UPLOAD_ID}&fileName=${FILE_NAME}").withHeaders(
         ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       )
@@ -208,8 +207,8 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       println("listMultipartUpload.content: " + contentAsString(result))
     }
 
-    "get list part on GET /v1/users/:userId/listParts" in new WithApplication {
-      val request = FakeRequest(GET, s"/v1/users/${USER_ID}/listParts?fileName=${FILE_NAME}&uploadId=${PART_UPLOAD_ID}").withHeaders(
+    "get list part on GET /v1/files/listParts" in new WithApplication {
+      val request = FakeRequest(GET, s"/v1/files/listParts?fileName=${FILE_NAME}&uploadId=${PART_UPLOAD_ID}").withHeaders(
         ("sessionId", SESSION_ID),
         ("x-forwarded-for", "8.8.8.8")
       )

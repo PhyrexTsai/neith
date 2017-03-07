@@ -8,7 +8,7 @@ import play.api.libs.json.Json
 /**
   * Created by phyrextsai on 2017/2/14.
   */
-object Users {
+object Files {
 
   case class UploadResp(fileUrl: String)
 

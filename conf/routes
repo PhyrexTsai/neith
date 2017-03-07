@@ -29,18 +29,12 @@ GET     /health                                         me.mig.neith.controllers
 ###
 #  description: Upload file
 #  tags:
-#    - Users
+#    - Files
 #  produces:
 #    - application/json
 #  consumes:
 #    - multipart/form-data
 #  parameters:
-#    - name: userId
-#      in: path
-#      description: User Id
-#      default: 195500745
-#      type: integer
-#      required: true
 #    - name: sessionId
 #      in: header
 #      description: Session ID for validation
@@ -58,27 +52,21 @@ GET     /health                                         me.mig.neith.controllers
 #    '200':
 #      description: OK
 #      schema:
-#        $ref: '#/definitions/me.mig.neith.models.Users.UploadResp'
+#        $ref: '#/definitions/me.mig.neith.models.Files.UploadResp'
 #    '400':
 #      description: Bad request
 #    '500':
 #      description: Internal server error
 ###
-PUT     /v1/users/:userId/upload                        me.mig.neith.controllers.UsersController.upload(userId: Int)
+PUT     /v1/files/upload                        me.mig.neith.controllers.FilesController.upload
 
 ###
 #  description: Generate pre-signed url
 #  tags:
-#    - Users
+#    - Files
 #  produces:
 #    - application/json
 #  parameters:
-#    - name: userId
-#      in: path
-#      description: User Id
-#      default: 195500745
-#      type: integer
-#      required: true
 #    - name: sessionId
 #      in: header
 #      description: Session ID for validation
@@ -90,34 +78,28 @@ PUT     /v1/users/:userId/upload                        me.mig.neith.controllers
 #      in: body
 #      description: request body
 #      schema:
-#        $ref: '#/definitions/me.mig.neith.models.Users.PreSignedUpload'
+#        $ref: '#/definitions/me.mig.neith.models.Files.PreSignedUpload'
 #      required: true
 #  summary: Generate pre-signed url
 #  responses:
 #    '200':
 #      description: OK
 #      schema:
-#        $ref: '#/definitions/me.mig.neith.models.Users.PreSignedUploadResp'
+#        $ref: '#/definitions/me.mig.neith.models.Files.PreSignedUploadResp'
 #    '400':
 #      description: Bad request
 #    '500':
 #      description: Internal server error
 ###
-POST    /v1/users/:userId/preSignedUpload               me.mig.neith.controllers.UsersController.preSignedUpload(userId: Int)
+POST    /v1/files/preSignedUpload               me.mig.neith.controllers.FilesController.preSignedUpload
 
 ###
 #  description: Initiate multipart upload
 #  tags:
-#    - Users
+#    - Files
 #  produces:
 #    - application/json
 #  parameters:
-#    - name: userId
-#      in: path
-#      description: User Id
-#      default: 195500745
-#      type: integer
-#      required: true
 #    - name: sessionId
 #      in: header
 #      description: Session ID for validation
@@ -129,34 +111,28 @@ POST    /v1/users/:userId/preSignedUpload               me.mig.neith.controllers
 #      in: body
 #      description: request body
 #      schema:
-#        $ref: '#/definitions/me.mig.neith.models.Users.InitiateMultipartUpload'
+#        $ref: '#/definitions/me.mig.neith.models.Files.InitiateMultipartUpload'
 #      required: true
 #  summary: Initiate multipart upload
 #  responses:
 #    '200':
 #      description: OK
 #      schema:
-#        $ref: '#/definitions/me.mig.neith.models.Users.InitiateMultipartUploadResp'
+#        $ref: '#/definitions/me.mig.neith.models.Files.InitiateMultipartUploadResp'
 #    '400':
 #      description: Bad request
 #    '500':
 #      description: Internal server error
 ###
-POST    /v1/users/:userId/initiateMultipartUpload       me.mig.neith.controllers.UsersController.initiateMultipartUpload(userId: Int)
+POST    /v1/files/initiateMultipartUpload       me.mig.neith.controllers.FilesController.initiateMultipartUpload
 
 ###
 #  description: Upload part
 #  tags:
-#    - Users
+#    - Files
 #  produces:
 #    - application/json
 #  parameters:
-#    - name: userId
-#      in: path
-#      description: User Id
-#      default: 195500745
-#      type: integer
-#      required: true
 #    - name: sessionId
 #      in: header
 #      description: Session ID for validation
@@ -193,21 +169,15 @@ POST    /v1/users/:userId/initiateMultipartUpload       me.mig.neith.controllers
 #    '500':
 #      description: Internal server error
 ###
-POST    /v1/users/:userId/uploadPart                    me.mig.neith.controllers.UsersController.uploadPart(userId: Int)
+POST    /v1/files/uploadPart                    me.mig.neith.controllers.FilesController.uploadPart
 
 ###
 #  description: Initiate multipart upload
 #  tags:
-#    - Users
+#    - Files
 #  produces:
 #    - application/json
 #  parameters:
-#    - name: userId
-#      in: path
-#      description: User Id
-#      default: 195500745
-#      type: integer
-#      required: true
 #    - name: sessionId
 #      in: header
 #      description: Session ID for validation
@@ -219,7 +189,7 @@ POST    /v1/users/:userId/uploadPart                    me.mig.neith.controllers
 #      in: body
 #      description: request body
 #      schema:
-#        $ref: '#/definitions/me.mig.neith.models.Users.CompleteMultipartUpload'
+#        $ref: '#/definitions/me.mig.neith.models.Files.CompleteMultipartUpload'
 #      required: true
 #  summary: Initiate multipart upload
 #  responses:
@@ -230,21 +200,15 @@ POST    /v1/users/:userId/uploadPart                    me.mig.neith.controllers
 #    '500':
 #      description: Internal server error
 ###
-POST    /v1/users/:userId/completeMultipartUpload       me.mig.neith.controllers.UsersController.completeMultipartUpload(userId: Int)
+POST    /v1/files/completeMultipartUpload       me.mig.neith.controllers.FilesController.completeMultipartUpload
 
 ###
 #  description: Abort multipart upload
 #  tags:
-#    - Users
+#    - Files
 #  produces:
 #    - application/json
 #  parameters:
-#    - name: userId
-#      in: path
-#      description: User Id
-#      default: 195500745
-#      type: integer
-#      required: true
 #    - name: sessionId
 #      in: header
 #      description: Session ID for validation
@@ -271,21 +235,15 @@ POST    /v1/users/:userId/completeMultipartUpload       me.mig.neith.controllers
 #    '500':
 #      description: Internal server error
 ###
-DELETE  /v1/users/:userId/abortMultipartUpload          me.mig.neith.controllers.UsersController.abortMultipartUpload(userId: Int, fileName: String, uploadId: String)
+DELETE  /v1/files/abortMultipartUpload          me.mig.neith.controllers.FilesController.abortMultipartUpload(fileName: String, uploadId: String)
 
 ###
 #  description: List multipart uploads
 #  tags:
-#    - Users
+#    - Files
 #  produces:
 #    - application/json
 #  parameters:
-#    - name: userId
-#      in: path
-#      description: User Id
-#      default: 195500745
-#      type: integer
-#      required: true
 #    - name: sessionId
 #      in: header
 #      description: Session ID for validation
@@ -324,21 +282,15 @@ DELETE  /v1/users/:userId/abortMultipartUpload          me.mig.neith.controllers
 #    '500':
 #      description: Internal server error
 ###
-GET     /v1/users/:userId/listMultipartUploads          me.mig.neith.controllers.UsersController.listMultipartUploads(userId: Int, fileName: String, uploadId: String, maxUploads: Int = 3, delimiter: String = "")
+GET     /v1/files/listMultipartUploads          me.mig.neith.controllers.FilesController.listMultipartUploads(fileName: String, uploadId: String, maxUploads: Int = 3, delimiter: String = "")
 
 ###
 #  description: List upload parts
 #  tags:
-#    - Users
+#    - Files
 #  produces:
 #    - application/json
 #  parameters:
-#    - name: userId
-#      in: path
-#      description: User Id
-#      default: 195500745
-#      type: integer
-#      required: true
 #    - name: sessionId
 #      in: header
 #      description: Session ID for validation
@@ -376,10 +328,10 @@ GET     /v1/users/:userId/listMultipartUploads          me.mig.neith.controllers
 #      schema:
 #        type: array
 #        items:
-#          $ref: '#/definitions/me.mig.neith.models.Users.Part'
+#          $ref: '#/definitions/me.mig.neith.models.Files.Part'
 #    '400':
 #      description: Bad request
 #    '500':
 #      description: Internal server error
 ###
-GET     /v1/users/:userId/listParts                     me.mig.neith.controllers.UsersController.listParts(userId: Int, fileName: String, uploadId: String, maxParts: Int = 10, partNumber: Int = 0)
+GET     /v1/files/listParts                     me.mig.neith.controllers.FilesController.listParts(fileName: String, uploadId: String, maxParts: Int = 10, partNumber: Int = 0)

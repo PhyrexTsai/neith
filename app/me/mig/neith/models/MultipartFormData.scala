@@ -1,6 +1,6 @@
 package me.mig.neith.models
 
-import java.nio.file.{Files, Paths}
+import java.nio.file.Paths
 
 import play.api.http.{HeaderNames, Writeable}
 import play.api.libs.Files.TemporaryFile
@@ -40,7 +40,7 @@ object MultipartFormDataWritable {
     transform = { form: MultipartFormData[TemporaryFile] =>
       formatDataParts(form.dataParts) ++
         form.files.flatMap { file =>
-          val fileBytes = Files.readAllBytes(Paths.get(file.ref.file.getAbsolutePath))
+          val fileBytes = java.nio.file.Files.readAllBytes(Paths.get(file.ref.file.getAbsolutePath))
           filePartHeader(file) ++ fileBytes ++ Codec.utf_8.encode("\r\n")
         } ++
         Codec.utf_8.encode(s"--$boundary--")
