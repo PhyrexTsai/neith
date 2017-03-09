@@ -31,6 +31,14 @@ class FilesController @Inject()(fileService: FileService,
       .recover(processErrorResponse)
   }
 
+  def preSignedPartUpload = VerifiedUserAction.async(parse.json) { request =>
+    Source.single(request.body.as[PreSignedPartUpload])
+      .mapAsync(1)(fileService.preSignedPartUpload(request.userId, _))
+      .map(processGeneralResponse[JsValue])
+      .runWith(Sink.head)
+      .recover(processErrorResponse)
+  }
+
   def upload = VerifiedUserAction.async(parse.multipartFormData) { request =>
     Source.fromFuture(fileService.upload(request.userId, request.body))
       .map(processGeneralResponse[JsValue])

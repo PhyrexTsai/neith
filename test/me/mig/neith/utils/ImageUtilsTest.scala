@@ -14,6 +14,7 @@ class ImageUtilsTest extends FlatSpec with Matchers {
   private val USER_ID = 195711006
   private val FILE_PATH = "test/resources/test.jpeg"
   private val TEMPFILE_PATH = "test/resources/template.jpeg"
+  private val UPLOAD_ID = "AOO5UYEXgUnyj033E7mSbFWvxCINPRk0BMCPEtB7ZbV6rjVtGtaNPIwWKeU_mNEj7yXyrJReA0cd7WcgFP6dV5wPRh9_Nggl_X4JAkNXVQOU2yYc..pNmohjjrLS7bQU"
 
   private val config = Configuration.load(Environment.simple(new File("test/resources/application.conf")))
 
@@ -30,6 +31,12 @@ class ImageUtilsTest extends FlatSpec with Matchers {
     preSignedUrl.getPath.matches("/i\\/\\w{4}\\/\\w{36}\\/\\w{13}") should be(true)
     preSignedUrl.getQuery.contains("Signature") should be(true)
     preSignedUrl.getQuery.contains("x-amz-acl") should be(true)
+  }
+
+  "A Upload Part Pre-signed URL" should "generate" in {
+    val imageUtils = new ImageUtils(config)
+    val preSignedUrl = imageUtils.generateUploadPartPreSignedUrl(bucketName, "migme.jpg", 1, UPLOAD_ID, DateTime.now.plusMinutes(10))
+    println(s"UPLOAD PART PRE-SIGNED URL: ${preSignedUrl}")
   }
 
   "A test image" should "exists" in {

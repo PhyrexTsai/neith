@@ -61,7 +61,7 @@ GET     /health                                         me.mig.neith.controllers
 PUT     /v1/files/upload                        me.mig.neith.controllers.FilesController.upload
 
 ###
-#  description: Generate pre-signed url
+#  description: Generate pre-signed upload url
 #  tags:
 #    - Files
 #  produces:
@@ -80,7 +80,7 @@ PUT     /v1/files/upload                        me.mig.neith.controllers.FilesCo
 #      schema:
 #        $ref: '#/definitions/me.mig.neith.models.Files.PreSignedUpload'
 #      required: true
-#  summary: Generate pre-signed url
+#  summary: Generate pre-signed upload url
 #  responses:
 #    '200':
 #      description: OK
@@ -92,6 +92,39 @@ PUT     /v1/files/upload                        me.mig.neith.controllers.FilesCo
 #      description: Internal server error
 ###
 POST    /v1/files/preSignedUpload               me.mig.neith.controllers.FilesController.preSignedUpload
+
+###
+#  description: Generate pre-signed part upload url
+#  tags:
+#    - Files
+#  produces:
+#    - application/json
+#  parameters:
+#    - name: sessionId
+#      in: header
+#      description: Session ID for validation
+#      default: >-
+#        wpWQkbUF8+b+AJKbVAhuk/ymSx62s72bMu39NhMmfmbTFLRDbWlvA4X9QiaiuWX4AM7adw77Uc7MsyRYtRJSuxVvUIfha5o1QRITmAEct1IZahZpw4whWIRzm84PoPuyciMpBMNJnSD7rdy6OPiqFb7PpN18K3iRv3EPCF7E/F3Q6v6CKPQfDtjcfWvC6FWtl0JD3YUZ/Rbum6HT3nsPjrrvlX9/tu8GQJ6BwozVBQXYrJQiilEYWUsGVugmWbCPQyDnrJblPRWb0xF8e5c5LtUFyLzkOUF0iX/vM3G//PvV6sLnlFzHlhStx2KaeDNb7SLgHVpkd56Xu6+u+Z3qHwlz/JoXU59IZ9AgpHCwvvL1Yb/+cC73dbCOI+LbFhtAM+EXWbbeks2fvLC7DuYlMA==
+#      type: string
+#      required: true
+#    - name: body
+#      in: body
+#      description: request body
+#      schema:
+#        $ref: '#/definitions/me.mig.neith.models.Files.PreSignedPartUpload'
+#      required: true
+#  summary: Generate pre-signed part upload url
+#  responses:
+#    '200':
+#      description: OK
+#      schema:
+#        $ref: '#/definitions/me.mig.neith.models.Files.PreSignedUploadResp'
+#    '400':
+#      description: Bad request
+#    '500':
+#      description: Internal server error
+###
+POST    /v1/files/preSignedPartUpload               me.mig.neith.controllers.FilesController.preSignedPartUpload
 
 ###
 #  description: Initiate multipart upload
@@ -160,7 +193,7 @@ POST    /v1/files/initiateMultipartUpload       me.mig.neith.controllers.FilesCo
 #      description: Upload Id
 #      type: string
 #      required: true
-#  summary: Initiate multipart upload
+#  summary: Upload part
 #  responses:
 #    '200':
 #      description: OK
@@ -172,7 +205,7 @@ POST    /v1/files/initiateMultipartUpload       me.mig.neith.controllers.FilesCo
 POST    /v1/files/uploadPart                    me.mig.neith.controllers.FilesController.uploadPart
 
 ###
-#  description: Initiate multipart upload
+#  description: Complete multipart upload
 #  tags:
 #    - Files
 #  produces:
@@ -191,7 +224,7 @@ POST    /v1/files/uploadPart                    me.mig.neith.controllers.FilesCo
 #      schema:
 #        $ref: '#/definitions/me.mig.neith.models.Files.CompleteMultipartUpload'
 #      required: true
-#  summary: Initiate multipart upload
+#  summary: Complete multipart upload
 #  responses:
 #    '200':
 #      description: OK

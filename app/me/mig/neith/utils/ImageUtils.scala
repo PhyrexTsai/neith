@@ -71,4 +71,23 @@ class ImageUtils @Inject()(config: Configuration) {
     request.addRequestParameter("x-amz-acl", CannedAccessControlList.PublicRead.toString)
     s3.generatePresignedUrl(request)
   }
+
+  /**
+    * Generate uploadPart pre-signed url with acl: public-read
+    * @param bucketName
+    * @param fileName
+    * @param expiration
+    * @param partNumber
+    * @param uploadId
+    * @return
+    */
+  def generateUploadPartPreSignedUrl(bucketName: String, fileName: String, partNumber: Int, uploadId: String, expiration: DateTime): java.net.URL = {
+    val request = new GeneratePresignedUrlRequest(bucketName, fileName, HttpMethod.PUT);
+    request.setExpiration(expiration.toDate)
+    request.addRequestParameter("x-amz-acl", CannedAccessControlList.PublicRead.toString)
+    request.addRequestParameter("partNumber", partNumber.toString)
+    request.addRequestParameter("uploadId", uploadId)
+    s3.generatePresignedUrl(request)
+  }
+
 }
