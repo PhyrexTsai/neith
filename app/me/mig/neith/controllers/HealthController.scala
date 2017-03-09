@@ -12,7 +12,7 @@ class HealthController extends Controller {
 
   /**
     * Check service status
-    * 
+    *
     * @return
     */
   def alive = Action {

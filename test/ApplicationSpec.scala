@@ -23,6 +23,7 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
   val UPLOAD_ID = "sbXss9LSf90W7hOT_kjukU_8J16Q.enhYm0LuhL5JoZDbB4liDQZx4LNrRTZC6C2CR9UCTl8AGwpVhFDZiToO8st1ASsqI9L3aL47E8Qy_ZgdTl.aC0_3vmFNIuq3_Vt"
   val PART_UPLOAD_ID = "gTZRV0LMJ.QFNimPPV4Oy4L4nxhg5TOfXe8Ho2EyY7C9AGj9AfnVwyG9jsEfiwWJJ1IdEOS5IamUPFROKoNd6hPz8QKomiEDuaoY1_ZPRZx1HICnP9sw7GY53wwHtamB"
   val ABORT_UPLOAD_ID = "G69Lk4NjASlga5EUrLyWHm0KKL3w3yCdsaA6okXoPvCXxktlZBF39XVySqjuN6u96wGNvEVJAU3iK4rKE_G9D8ip0i3bJ8G62GoZbgwMj4OlorYrD5BNmOFU2f0LNso."
+  val PRE_SIGNED_UPLOAD_ID = "AOO5UYEXgUnyj033E7mSbFWvxCINPRk0BMCPEtB7ZbV6rjVtGtaNPIwWKeU_mNEj7yXyrJReA0cd7WcgFP6dV5wPRh9_Nggl_X4JAkNXVQOU2yYc..pNmohjjrLS7bQU"
   // Reference with "Working directory"
   val FILE_PATH = "test/resources/test.jpeg"
   val TEMP_FILE_PATH = "test/resources/file.jpeg"
@@ -90,7 +91,7 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
       * Reference: http://stackoverflow.com/questions/10100193/put-file-to-s3-with-presigned-url
       * curl -k -v -T migme.jpg "https://images-staging.mig33.com.s3-us-west-1.amazonaws.com/i/44da/4220ace733d265a6a92fd1435573df123713/1488444291086?AWSAccessKeyId=AKIAJR35PVXZGYS6JRTA&Expires=1488444891&Signature=UPVMrSi9uF21lTT7C2NEF2nVlYc%3D"
       */
-    "generate pre-signed url on POST /v1/files/preSignedUpload" in new WithApplication {
+    "generate pre-signed upload url on POST /v1/files/preSignedUpload" in new WithApplication {
       val body = Json.obj(
         "fileName" -> FILE_NAME
       )
@@ -102,6 +103,25 @@ class ApplicationSpec extends Specification with BeforeExample with AfterExample
 
       val preSignedUrl = contentAsJson(result).as[PreSignedUploadResp].preSignedUrl
       println(preSignedUrl)
+      status(result) must equalTo(OK)
+      contentType(result) must beSome.which(_ == "application/json")
+      contentAsString(result) must contain("preSignedUrl")
+    }
+
+    "generate pre-signed part upload url on POST /v1/files/preSignedPartUpload" in new WithApplication {
+      val body = Json.obj(
+        "fileName" -> FILE_NAME,
+        "partNumber" -> 1,
+        "uploadId" -> PRE_SIGNED_UPLOAD_ID
+      )
+      val request = FakeRequest(POST, s"/v1/files/preSignedPartUpload").withHeaders(
+        ("sessionId", SESSION_ID),
+        ("x-forwarded-for", "8.8.8.8")
+      ).withJsonBody(body)
+      val result = route(request).get
+
+      val preSignedPartUploadUrl = contentAsJson(result).as[PreSignedUploadResp].preSignedUrl
+      println(preSignedPartUploadUrl)
       status(result) must equalTo(OK)
       contentType(result) must beSome.which(_ == "application/json")
       contentAsString(result) must contain("preSignedUrl")

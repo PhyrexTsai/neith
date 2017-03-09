@@ -89,6 +89,22 @@ class FileService @Inject()(ws: WSClient, config: Configuration, ec: ExecutionCo
   }
 
   /**
+    * Generate Pre-signed url for S3 part upload
+    *
+    * @param userId
+    * @param file
+    * @return
+    */
+  def preSignedPartUpload(userId: Int, file: PreSignedPartUpload): Future[JsValue] = {
+    val imageUtils = new ImageUtils(config)
+    Future.successful(
+      Json.obj(
+        "preSignedUrl" -> imageUtils.generateUploadPartPreSignedUrl(bucketName, file.fileName, file.partNumber, file.uploadId, DateTime.now.plusMinutes(preSignedUrlExpire)).toString
+      )
+    )
+  }
+
+  /**
     * Initiate a multupart upload id to handle upload
     *
     * @param userId
