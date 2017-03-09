@@ -14,6 +14,8 @@ object Files {
 
   case class PreSignedUpload(fileName: String)
 
+  case class PreSignedPartUpload(fileName: String, partNumber: Int, uploadId: String)
+
   case class PreSignedUploadResp(preSignedUrl: String)
 
   case class InitiateMultipartUpload(fileName: String, contentType: String)
@@ -32,6 +34,8 @@ object Files {
   implicit val uploadRespReads = Json.reads[UploadResp]
   implicit val preSignedUploadWrites = Json.writes[PreSignedUpload]
   implicit val preSignedUploadReads = Json.reads[PreSignedUpload]
+  implicit val preSignedPartUploadWrites = Json.writes[PreSignedPartUpload]
+  implicit val preSignedPartUploadReads = Json.reads[PreSignedPartUpload]
   implicit val preSignedUploadRespWrites = Json.writes[PreSignedUploadResp]
   implicit val preSignedUploadRespReads = Json.reads[PreSignedUploadResp]
   implicit val initiateMultipartUploadWrites = Json.writes[InitiateMultipartUpload]
