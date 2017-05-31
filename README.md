@@ -1,5 +1,7 @@
 # neith-in-play
 
+Neith is a service that helps user to upload image to AWS S3.
+
 ## Design Choise
 
 - Scala : Core language.
